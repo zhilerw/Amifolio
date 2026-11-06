@@ -1,0 +1,307 @@
+[
+  {
+    "package": "Microsoft.Data.Sqlite/10.0.14",
+    "licenseType": "expression",
+    "license": "MIT",
+    "licenseUrl": "https://licenses.nuget.org/MIT",
+    "authors": "Microsoft",
+    "copyright": "© Microsoft Corporation. All rights reserved.",
+    "notices": []
+  },
+  {
+    "package": "Microsoft.Data.Sqlite.Core/10.0.14",
+    "licenseType": "expression",
+    "license": "MIT",
+    "licenseUrl": "https://licenses.nuget.org/MIT",
+    "authors": "Microsoft",
+    "copyright": "© Microsoft Corporation. All rights reserved.",
+    "notices": []
+  },
+  {
+    "package": "Microsoft.Web.WebView2/1.0.3719.77",
+    "licenseType": "file",
+    "license": "LICENSE.txt",
+    "licenseUrl": "https://aka.ms/deprecateLicenseUrl",
+    "authors": "Microsoft",
+    "copyright": "© Microsoft Corporation. All rights reserved.",
+    "notices": [
+      {
+        "path": "packages/microsoft.web.webview2/1.0.3719.77/LICENSE.txt",
+        "sha256": "0AF8F1B807512AAE39C2AC1AA4D0CAE65CABECB6FD554B8439A5162A0D6ECA55"
+      },
+      {
+        "path": "packages/microsoft.web.webview2/1.0.3719.77/NOTICE.txt",
+        "sha256": "106423785C5B7EBA0A8E61D1837F2132E9C828E20AD530F565D981C1DF60DD90"
+      }
+    ]
+  },
+  {
+    "package": "Microsoft.Windows.AI.MachineLearning/2.4.89",
+    "licenseType": "file",
+    "license": "license.txt",
+    "licenseUrl": "https://aka.ms/deprecateLicenseUrl",
+    "authors": "Microsoft",
+    "copyright": "© Microsoft Corporation. All rights reserved.",
+    "notices": [
+      {
+        "path": "packages/microsoft.windows.ai.machinelearning/2.4.89/license.txt",
+        "sha256": "66395F8CB219087FAE2BD025010BD9076B736C14F03B48F20295471C0C376814"
+      },
+      {
+        "path": "packages/microsoft.windows.ai.machinelearning/2.4.89/ThirdPartyNotices.txt",
+        "sha256": "FB0AF774B4D7CFFC5B9D046F2AAEADE2F37DF2F80ABF8033C95DFFFCC77A8866"
+      }
+    ]
+  },
+  {
+    "package": "Microsoft.Windows.SDK.BuildTools/10.0.26100.7705",
+    "licenseType": "",
+    "license": "",
+    "licenseUrl": "https://aka.ms/WinSDKLicenseURL",
+    "authors": "Microsoft",
+    "copyright": "© Microsoft Corporation. All rights reserved.",
+    "notices": []
+  },
+  {
+    "package": "Microsoft.Windows.SDK.BuildTools.MSIX/1.7.251221100",
+    "licenseType": "file",
+    "license": "sdk_license.txt",
+    "licenseUrl": "https://aka.ms/deprecateLicenseUrl",
+    "authors": "Microsoft",
+    "copyright": "© Microsoft Corporation. All rights reserved.",
+    "notices": [
+      {
+        "path": "packages/microsoft.windows.sdk.buildtools.msix/1.7.251221100/NOTICE.txt",
+        "sha256": "F09EBF5DE6A5C8E7EBC900BB2E52AF2F75E13610A1CF91E1514530E448D956C3"
+      },
+      {
+        "path": "packages/microsoft.windows.sdk.buildtools.msix/1.7.251221100/sdk_license.txt",
+        "sha256": "A7A5C7E7FF998558983D6ACA2702117C328AEB0C6404D298CB275F5623C6FD13"
+      }
+    ]
+  },
+  {
+    "package": "Microsoft.WindowsAppSDK/2.6.5",
+    "licenseType": "file",
+    "license": "license.txt",
+    "licenseUrl": "https://aka.ms/deprecateLicenseUrl",
+    "authors": "Microsoft",
+    "copyright": "© Microsoft Corporation. All rights reserved.",
+    "notices": [
+      {
+        "path": "packages/microsoft.windowsappsdk/2.6.5/license.txt",
+        "sha256": "5B11E6347756E40FE0274BC08C97F89201B94F0D50181A09A00F1F4740840501"
+      },
+      {
+        "path": "packages/microsoft.windowsappsdk/2.6.5/NOTICE.txt",
+        "sha256": "572B43D41DEA717DAE7DC5DE69ACB20A74DF025E8F5A3C0AA6F7BCA02615E23C"
+      }
+    ]
+  },
+  {
+    "package": "Microsoft.WindowsAppSDK.AI/2.6.5",
+    "licenseType": "file",
+    "license": "license.txt",
+    "licenseUrl": "https://aka.ms/deprecateLicenseUrl",
+    "authors": "Microsoft",
+    "copyright": "© Microsoft Corporation. All rights reserved.",
+    "notices": [
+      {
+        "path": "packages/microsoft.windowsappsdk.ai/2.6.5/license.txt",
+        "sha256": "5B11E6347756E40FE0274BC08C97F89201B94F0D50181A09A00F1F4740840501"
+      }
+    ]
+  },
+  {
+    "package": "Microsoft.WindowsAppSDK.Base/2.6.5",
+    "licenseType": "file",
+    "license": "license.txt",
+    "licenseUrl": "https://aka.ms/deprecateLicenseUrl",
+    "authors": "Microsoft",
+    "copyright": "© Microsoft Corporation. All rights reserved.",
+    "notices": [
+      {
+        "path": "packages/microsoft.windowsappsdk.base/2.6.5/license.txt",
+        "sha256": "5B11E6347756E40FE0274BC08C97F89201B94F0D50181A09A00F1F4740840501"
+      },
+      {
+        "path": "packages/microsoft.windowsappsdk.base/2.6.5/NOTICE.txt",
+        "sha256": "572B43D41DEA717DAE7DC5DE69ACB20A74DF025E8F5A3C0AA6F7BCA02615E23C"
+      }
+    ]
+  },
+  {
+    "package": "Microsoft.WindowsAppSDK.DWrite/2.6.5",
+    "licenseType": "file",
+    "license": "license.txt",
+    "licenseUrl": "https://aka.ms/deprecateLicenseUrl",
+    "authors": "Microsoft",
+    "copyright": "© Microsoft Corporation. All rights reserved.",
+    "notices": [
+      {
+        "path": "packages/microsoft.windowsappsdk.dwrite/2.6.5/license.txt",
+        "sha256": "5B11E6347756E40FE0274BC08C97F89201B94F0D50181A09A00F1F4740840501"
+      }
+    ]
+  },
+  {
+    "package": "Microsoft.WindowsAppSDK.Foundation/2.6.5",
+    "licenseType": "file",
+    "license": "license.txt",
+    "licenseUrl": "https://aka.ms/deprecateLicenseUrl",
+    "authors": "Microsoft",
+    "copyright": "© Microsoft Corporation. All rights reserved.",
+    "notices": [
+      {
+        "path": "packages/microsoft.windowsappsdk.foundation/2.6.5/license.txt",
+        "sha256": "5B11E6347756E40FE0274BC08C97F89201B94F0D50181A09A00F1F4740840501"
+      }
+    ]
+  },
+  {
+    "package": "Microsoft.WindowsAppSDK.InteractiveExperiences/2.6.5",
+    "licenseType": "file",
+    "license": "license.txt",
+    "licenseUrl": "https://aka.ms/deprecateLicenseUrl",
+    "authors": "Microsoft",
+    "copyright": "© Microsoft Corporation. All rights reserved.",
+    "notices": [
+      {
+        "path": "packages/microsoft.windowsappsdk.interactiveexperiences/2.6.5/license.txt",
+        "sha256": "5B11E6347756E40FE0274BC08C97F89201B94F0D50181A09A00F1F4740840501"
+      }
+    ]
+  },
+  {
+    "package": "Microsoft.WindowsAppSDK.ML/2.6.5",
+    "licenseType": "file",
+    "license": "license.txt",
+    "licenseUrl": "https://aka.ms/deprecateLicenseUrl",
+    "authors": "Microsoft",
+    "copyright": "© Microsoft Corporation. All rights reserved.",
+    "notices": [
+      {
+        "path": "packages/microsoft.windowsappsdk.ml/2.6.5/license.txt",
+        "sha256": "656AAB74C15AA9F9964BCDCC993EB2755CBDB4822D5E0E3BC61D2E281897F758"
+      }
+    ]
+  },
+  {
+    "package": "Microsoft.WindowsAppSDK.Runtime/2.6.5",
+    "licenseType": "file",
+    "license": "license.txt",
+    "licenseUrl": "https://aka.ms/deprecateLicenseUrl",
+    "authors": "Microsoft",
+    "copyright": "© Microsoft Corporation. All rights reserved.",
+    "notices": [
+      {
+        "path": "packages/microsoft.windowsappsdk.runtime/2.6.5/license.txt",
+        "sha256": "5B11E6347756E40FE0274BC08C97F89201B94F0D50181A09A00F1F4740840501"
+      },
+      {
+        "path": "packages/microsoft.windowsappsdk.runtime/2.6.5/NOTICE.txt",
+        "sha256": "572B43D41DEA717DAE7DC5DE69ACB20A74DF025E8F5A3C0AA6F7BCA02615E23C"
+      }
+    ]
+  },
+  {
+    "package": "Microsoft.WindowsAppSDK.Search/2.6.5",
+    "licenseType": "file",
+    "license": "license.txt",
+    "licenseUrl": "https://aka.ms/deprecateLicenseUrl",
+    "authors": "Microsoft",
+    "copyright": "© Microsoft Corporation. All rights reserved.",
+    "notices": [
+      {
+        "path": "packages/microsoft.windowsappsdk.search/2.6.5/license.txt",
+        "sha256": "5B11E6347756E40FE0274BC08C97F89201B94F0D50181A09A00F1F4740840501"
+      }
+    ]
+  },
+  {
+    "package": "Microsoft.WindowsAppSDK.Widgets/2.6.5",
+    "licenseType": "file",
+    "license": "license.txt",
+    "licenseUrl": "https://aka.ms/deprecateLicenseUrl",
+    "authors": "Microsoft",
+    "copyright": "© Microsoft Corporation. All rights reserved.",
+    "notices": [
+      {
+        "path": "packages/microsoft.windowsappsdk.widgets/2.6.5/license.txt",
+        "sha256": "5B11E6347756E40FE0274BC08C97F89201B94F0D50181A09A00F1F4740840501"
+      }
+    ]
+  },
+  {
+    "package": "Microsoft.WindowsAppSDK.WinUI/2.6.5",
+    "licenseType": "file",
+    "license": "license.txt",
+    "licenseUrl": "https://aka.ms/deprecateLicenseUrl",
+    "authors": "Microsoft",
+    "copyright": "© Microsoft Corporation. All rights reserved.",
+    "notices": [
+      {
+        "path": "packages/microsoft.windowsappsdk.winui/2.6.5/license.txt",
+        "sha256": "5B11E6347756E40FE0274BC08C97F89201B94F0D50181A09A00F1F4740840501"
+      },
+      {
+        "path": "packages/microsoft.windowsappsdk.winui/2.6.5/NOTICE.txt",
+        "sha256": "E25393C0D340A1821827B093FA4DBBFCCCD8FEB7BF769E7FA773E3955CD5314B"
+      }
+    ]
+  },
+  {
+    "package": "SQLitePCLRaw.bundle_e_sqlite3/2.1.13",
+    "licenseType": "expression",
+    "license": "Apache-2.0",
+    "licenseUrl": "https://licenses.nuget.org/Apache-2.0",
+    "authors": "Eric Sink",
+    "copyright": "Copyright 2014-2024 SourceGear, LLC",
+    "notices": []
+  },
+  {
+    "package": "SQLitePCLRaw.core/2.1.13",
+    "licenseType": "expression",
+    "license": "Apache-2.0",
+    "licenseUrl": "https://licenses.nuget.org/Apache-2.0",
+    "authors": "Eric Sink",
+    "copyright": "Copyright 2014-2024 SourceGear, LLC",
+    "notices": []
+  },
+  {
+    "package": "SQLitePCLRaw.lib.e_sqlite3/2.1.13",
+    "licenseType": "expression",
+    "license": "Apache-2.0",
+    "licenseUrl": "https://licenses.nuget.org/Apache-2.0",
+    "authors": "Eric Sink",
+    "copyright": "Copyright 2014-2024 SourceGear, LLC",
+    "notices": []
+  },
+  {
+    "package": "SQLitePCLRaw.provider.e_sqlite3/2.1.13",
+    "licenseType": "expression",
+    "license": "Apache-2.0",
+    "licenseUrl": "https://licenses.nuget.org/Apache-2.0",
+    "authors": "Eric Sink",
+    "copyright": "Copyright 2014-2024 SourceGear, LLC",
+    "notices": []
+  },
+  {
+    "package": "System.Numerics.Tensors/9.0.0",
+    "licenseType": "expression",
+    "license": "MIT",
+    "licenseUrl": "https://licenses.nuget.org/MIT",
+    "authors": "Microsoft",
+    "copyright": "© Microsoft Corporation. All rights reserved.",
+    "notices": [
+      {
+        "path": "packages/system.numerics.tensors/9.0.0/LICENSE.TXT",
+        "sha256": "D7A68596AB69B06F51CA278A6545148E4269A9381C26D597C13DF5D88E08CF5B"
+      },
+      {
+        "path": "packages/system.numerics.tensors/9.0.0/THIRD-PARTY-NOTICES.TXT",
+        "sha256": "40686C6447A7D5B5D3693068E4571B5F483D7ED335AEEE773EF662440DE4C5D5"
+      }
+    ]
+  }
+]

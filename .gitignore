@@ -1,0 +1,51 @@
+# Machine-local environment probes, downloads, and installer logs.
+.local/
+artifacts/
+.superpowers/
+/*.lnk
+
+# .NET / WinUI generated outputs.
+**/bin/
+**/obj/
+.vs/
+*.user
+*.suo
+**/publish/
+
+# Local backups, release archives and application databases.
+backups/
+*.bak
+*.zip
+*.zip.sha256.txt
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+
+# Local credentials and signing keys.
+.env
+.env.*
+.env*
+!.env.example
+id_rsa
+id_dsa
+id_ecdsa
+id_ed25519
+.npmrc
+.pypirc
+.netrc
+credentials
+credentials.*
+secrets.*
+secret.json
+*.pfx
+*.snk
+*.pem
+*.key
+*.p12
+*.p8
+*.keystore
+*.jks
+*.kdbx

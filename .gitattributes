@@ -1,0 +1,9 @@
+* text=auto eol=lf
+*.png binary
+*.ico binary
+*.lnk binary
+# Approved previews are byte-preserved design references, including their line endings.
+docs/design/previews/* -text
+# Preserve upstream license/notice bytes so their recorded hashes remain valid.
+docs/third-party/packages/** -text -whitespace
+docs/third-party/*.txt -text -whitespace

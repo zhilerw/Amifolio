@@ -1,0 +1,34 @@
+[
+  {
+    "repository": "yamadashy/repomix",
+    "source": "https://github.com/yamadashy/repomix/blob/main/LICENSE",
+    "gitBlobSha": "cc6cde3b20418ea0c9f503be0ab2e301bb02d6db",
+    "local": "Repomix-LICENSE.txt",
+    "sha256": "7A2200260D2E6A8D1137DFC85877D44029055863013123743EF56D625B4FB095",
+    "retrievedAt": "2026-11-06T10:06:01.3583388+08:00"
+  },
+  {
+    "repository": "files-community/Files",
+    "source": "https://github.com/files-community/Files/blob/main/LICENSE-MIT",
+    "gitBlobSha": "f534703f4f52272f8c5f803073c1812c7caedc9e",
+    "local": "Files-LICENSE-MIT.txt",
+    "sha256": "D3C8CA67F861BF3BA8E0C295392E364F9FDA78DDB9F0817842E5E0AF4A8630C5",
+    "retrievedAt": "2026-11-06T10:06:02.8085829+08:00"
+  },
+  {
+    "repository": "ericsink/SQLitePCL.raw",
+    "source": "https://github.com/ericsink/SQLitePCL.raw/blob/main/LICENSE.TXT",
+    "gitBlobSha": "d645695673349e3947e8e5ae42332d0ac3164cd7",
+    "local": "SQLitePCLRaw-LICENSE.txt",
+    "sha256": "CFC7749B96F63BD31C3C42B5C471BF756814053E847C10F3EB003417BC523D30",
+    "retrievedAt": "2026-11-06T10:06:04.3320955+08:00"
+  },
+  {
+    "repository": "dotnet/dotnet",
+    "source": "https://github.com/dotnet/dotnet/blob/main/LICENSE.TXT",
+    "gitBlobSha": "a616ed188dfce68ee308f674350ad242d8588c2b",
+    "local": "Dotnet-LICENSE.txt",
+    "sha256": "AE48DF11A335DC1A615F4F938B69CBA73BCF4485C4F97AF49B38EFB0F216353B",
+    "retrievedAt": "2026-11-06T10:06:11.5244832+08:00"
+  }
+]
