@@ -1,0 +1,15 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Amifolio.Bridge/Amifolio.Bridge.csproj" />
+    <Project Path="src/Amifolio.Context/Amifolio.Context.csproj" />
+    <Project Path="src/Amifolio.Core/Amifolio.Core.csproj" />
+    <Project Path="src/Amifolio.Desktop/Amifolio.Desktop.csproj" />
+    <Project Path="src/Amifolio.Worker/Amifolio.Worker.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Amifolio.Bridge.Tests/Amifolio.Bridge.Tests.csproj" />
+    <Project Path="tests/Amifolio.Context.Tests/Amifolio.Context.Tests.csproj" />
+    <Project Path="tests/Amifolio.Core.Tests/Amifolio.Core.Tests.csproj" />
+    <Project Path="tests/Amifolio.Desktop.Logic.Tests/Amifolio.Desktop.Logic.Tests.csproj" />
+  </Folder>
+</Solution>

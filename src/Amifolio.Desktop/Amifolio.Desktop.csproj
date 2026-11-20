@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.19041.0</TargetPlatformMinVersion>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <PlatformTarget>x64</PlatformTarget>
+    <UseWinUI>true</UseWinUI>
+    <WindowsPackageType>None</WindowsPackageType>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>../../assets/branding/amifolio.ico</ApplicationIcon>
+    <Version>1.0.0</Version>
+    <AssemblyName>Amifolio</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="2.6.5" />
+    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.7705" />
+    <ProjectReference Include="../Amifolio.Core/Amifolio.Core.csproj" />
+    <ProjectReference Include="../Amifolio.Context/Amifolio.Context.csproj" />
+    <Content Include="../../assets/branding/amifolio-icon-approved-v1.png" Link="Assets/Brand.png" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="../../assets/branding/amifolio.ico" Link="Assets/Amifolio.ico" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <Target Name="IncludeWinUIResourcesInPublish" AfterTargets="ComputeFilesToPublish">
+    <ItemGroup>
+      <ResolvedFileToPublish Include="$(TargetDir)$(AssemblyName).pri">
+        <RelativePath>$(AssemblyName).pri</RelativePath>
+        <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      </ResolvedFileToPublish>
+      <_AmifolioXbf Include="$(TargetDir)**\*.xbf" />
+      <ResolvedFileToPublish Include="@(_AmifolioXbf)" RelativePath="%(_AmifolioXbf.RecursiveDir)%(_AmifolioXbf.Filename)%(_AmifolioXbf.Extension)" CopyToPublishDirectory="PreserveNewest" />
+    </ItemGroup>
+  </Target>
+</Project>
