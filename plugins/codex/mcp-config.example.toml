@@ -1,0 +1,5 @@
+# Manual connection template; this file is never installed or merged automatically.
+# Publish first, then replace both paths. Keep the desktop app and bridge on one data root.
+[mcp_servers.amifolio]
+command = 'C:\replace\amifolio-bridge\Amifolio.Bridge.exe'
+args = ['--data-root', 'C:\replace\Amifolio', 'mcp']

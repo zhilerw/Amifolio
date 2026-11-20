@@ -1,0 +1,228 @@
+﻿<Application x:Class="Amifolio.Desktop.App"
+ xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+ xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+ xmlns:controls="using:Microsoft.UI.Xaml.Controls" RequestedTheme="Light">
+ <Application.Resources>
+  <ResourceDictionary>
+   <ResourceDictionary.MergedDictionaries><controls:XamlControlsResources /></ResourceDictionary.MergedDictionaries>
+   <!-- Root overrides outrank merged WinUI defaults; the app uses its fixed light palette. -->
+
+     <SolidColorBrush x:Key="ContentDialogBackground" Color="#FCFAF5" />
+     <SolidColorBrush x:Key="ContentDialogTopOverlay" Color="#FCFAF5" />
+     <SolidColorBrush x:Key="ContentDialogBorderBrush" Color="#DEDFD6" />
+     <SolidColorBrush x:Key="ContentDialogForeground" Color="#303A35" />
+     <SolidColorBrush x:Key="ContentDialogSeparatorBorderBrush" Color="#DEDFD6" />
+     <!-- WinUI 2.6.5 generic.xaml keys: style the popup itself, not just the closed control.
+          Keep application overrides outside the merged default dictionary. -->
+     <SolidColorBrush x:Key="ComboBoxDropDownBackground" Color="#F6F1E6" />
+     <SolidColorBrush x:Key="ComboBoxDropDownBorderBrush" Color="#DEDFD6" />
+     <SolidColorBrush x:Key="ComboBoxDropDownForeground" Color="#303A35" />
+     <SolidColorBrush x:Key="ComboBoxBackground" Color="#FCFAF5" />
+     <SolidColorBrush x:Key="ComboBoxBackgroundUnfocused" Color="#FCFAF5" />
+     <SolidColorBrush x:Key="ComboBoxBackgroundFocused" Color="#FCFAF5" />
+     <SolidColorBrush x:Key="ComboBoxBackgroundPointerOver" Color="#F6F1E6" />
+     <SolidColorBrush x:Key="ComboBoxBackgroundPressed" Color="#EAF3EF" />
+     <SolidColorBrush x:Key="ComboBoxBorderBrush" Color="#DEDFD6" />
+     <SolidColorBrush x:Key="ComboBoxBorderBrushPointerOver" Color="#24766D" />
+     <SolidColorBrush x:Key="ComboBoxBorderBrushPressed" Color="#24766D" />
+     <SolidColorBrush x:Key="ComboBoxBackgroundBorderBrushUnfocused" Color="#DEDFD6" />
+     <SolidColorBrush x:Key="ComboBoxBackgroundBorderBrushFocused" Color="#24766D" />
+     <SolidColorBrush x:Key="ComboBoxForeground" Color="#303A35" />
+     <SolidColorBrush x:Key="ComboBoxForegroundPointerOver" Color="#303A35" />
+     <SolidColorBrush x:Key="ComboBoxForegroundPressed" Color="#303A35" />
+     <SolidColorBrush x:Key="ComboBoxForegroundFocused" Color="#303A35" />
+     <SolidColorBrush x:Key="ComboBoxForegroundFocusedPressed" Color="#303A35" />
+     <SolidColorBrush x:Key="ComboBoxDropDownBackgroundPointerOver" Color="#EAF3EF" />
+     <SolidColorBrush x:Key="ComboBoxDropDownBackgroundPointerPressed" Color="#DDEFE8" />
+     <SolidColorBrush x:Key="ComboBoxFocusedDropDownBackgroundPointerPressed" Color="#DDEFE8" />
+     <SolidColorBrush x:Key="ComboBoxDropDownGlyphForeground" Color="#24766D" />
+     <SolidColorBrush x:Key="ComboBoxDropDownGlyphForegroundFocused" Color="#24766D" />
+     <SolidColorBrush x:Key="ComboBoxDropDownGlyphForegroundFocusedPressed" Color="#24766D" />
+     <SolidColorBrush x:Key="ComboBoxEditableDropDownGlyphForeground" Color="#24766D" />
+
+     <SolidColorBrush x:Key="ComboBoxItemBackground" Color="Transparent" />
+     <SolidColorBrush x:Key="ComboBoxItemBackgroundPointerOver" Color="#EAF3EF" />
+     <SolidColorBrush x:Key="ComboBoxItemBackgroundPressed" Color="#DDEFE8" />
+     <SolidColorBrush x:Key="ComboBoxItemBackgroundSelected" Color="#DDEFE8" />
+     <SolidColorBrush x:Key="ComboBoxItemBackgroundSelectedUnfocused" Color="#DDEFE8" />
+     <SolidColorBrush x:Key="ComboBoxItemBackgroundSelectedPointerOver" Color="#DDEFE8" />
+     <SolidColorBrush x:Key="ComboBoxItemBackgroundSelectedPressed" Color="#DDEFE8" />
+     <SolidColorBrush x:Key="ComboBoxItemForeground" Color="#303A35" />
+     <SolidColorBrush x:Key="ComboBoxItemForegroundPointerOver" Color="#24766D" />
+     <SolidColorBrush x:Key="ComboBoxItemForegroundPressed" Color="#24766D" />
+     <SolidColorBrush x:Key="ComboBoxItemForegroundSelected" Color="#24766D" />
+     <SolidColorBrush x:Key="ComboBoxItemForegroundSelectedUnfocused" Color="#24766D" />
+     <SolidColorBrush x:Key="ComboBoxItemForegroundSelectedPointerOver" Color="#24766D" />
+     <SolidColorBrush x:Key="ComboBoxItemForegroundSelectedPressed" Color="#24766D" />
+     <SolidColorBrush x:Key="ComboBoxItemBorderBrushPointerOver" Color="Transparent" />
+     <SolidColorBrush x:Key="ComboBoxItemBorderBrushPressed" Color="Transparent" />
+     <SolidColorBrush x:Key="ComboBoxItemBorderBrushSelected" Color="Transparent" />
+     <SolidColorBrush x:Key="ComboBoxItemBorderBrushSelectedUnfocused" Color="Transparent" />
+     <SolidColorBrush x:Key="ComboBoxItemBorderBrushSelectedPointerOver" Color="Transparent" />
+     <SolidColorBrush x:Key="ComboBoxItemBorderBrushSelectedPressed" Color="Transparent" />
+     <SolidColorBrush x:Key="ComboBoxItemPillFillBrush" Color="#24766D" />
+
+     <!-- MenuFlyout also creates presenters for submenus and programmatic menus. -->
+     <SolidColorBrush x:Key="MenuFlyoutPresenterBackground" Color="#F6F1E6" />
+     <SolidColorBrush x:Key="MenuFlyoutPresenterBorderBrush" Color="#DEDFD6" />
+     <SolidColorBrush x:Key="MenuFlyoutSeparatorBackground" Color="#DEDFD6" />
+     <SolidColorBrush x:Key="MenuFlyoutItemBackground" Color="Transparent" />
+     <SolidColorBrush x:Key="MenuFlyoutItemBackgroundBrush" Color="Transparent" />
+     <SolidColorBrush x:Key="MenuFlyoutItemBackgroundPointerOver" Color="#EAF3EF" />
+     <SolidColorBrush x:Key="MenuFlyoutItemBackgroundPressed" Color="#DDEFE8" />
+     <SolidColorBrush x:Key="MenuFlyoutItemForeground" Color="#303A35" />
+     <SolidColorBrush x:Key="MenuFlyoutItemForegroundPointerOver" Color="#24766D" />
+     <SolidColorBrush x:Key="MenuFlyoutItemForegroundPressed" Color="#24766D" />
+     <SolidColorBrush x:Key="MenuFlyoutItemKeyboardAcceleratorTextForeground" Color="#718078" />
+     <SolidColorBrush x:Key="MenuFlyoutItemKeyboardAcceleratorTextForegroundPointerOver" Color="#24766D" />
+     <SolidColorBrush x:Key="MenuFlyoutItemKeyboardAcceleratorTextForegroundPressed" Color="#24766D" />
+     <SolidColorBrush x:Key="MenuFlyoutSubItemBackground" Color="Transparent" />
+     <SolidColorBrush x:Key="MenuFlyoutSubItemBackgroundBrush" Color="Transparent" />
+     <SolidColorBrush x:Key="MenuFlyoutSubItemBackgroundPointerOver" Color="#EAF3EF" />
+     <SolidColorBrush x:Key="MenuFlyoutSubItemBackgroundPressed" Color="#DDEFE8" />
+     <SolidColorBrush x:Key="MenuFlyoutSubItemBackgroundSubMenuOpened" Color="#DDEFE8" />
+     <SolidColorBrush x:Key="MenuFlyoutSubItemForeground" Color="#303A35" />
+     <SolidColorBrush x:Key="MenuFlyoutSubItemForegroundPointerOver" Color="#24766D" />
+     <SolidColorBrush x:Key="MenuFlyoutSubItemForegroundPressed" Color="#24766D" />
+     <SolidColorBrush x:Key="MenuFlyoutSubItemForegroundSubMenuOpened" Color="#24766D" />
+     <SolidColorBrush x:Key="MenuFlyoutSubItemChevron" Color="#718078" />
+     <SolidColorBrush x:Key="MenuFlyoutSubItemChevronPointerOver" Color="#24766D" />
+     <SolidColorBrush x:Key="MenuFlyoutSubItemChevronPressed" Color="#24766D" />
+     <SolidColorBrush x:Key="MenuFlyoutSubItemChevronSubMenuOpened" Color="#24766D" />
+     <!-- In this WinUI version ToggleMenuFlyoutItem uses the MenuFlyoutItem/SubItem
+          state brushes above; only its accelerator text has separate keys. -->
+     <SolidColorBrush x:Key="ToggleMenuFlyoutItemKeyboardAcceleratorTextForeground" Color="#718078" />
+     <SolidColorBrush x:Key="ToggleMenuFlyoutItemKeyboardAcceleratorTextForegroundPointerOver" Color="#24766D" />
+     <SolidColorBrush x:Key="ToggleMenuFlyoutItemKeyboardAcceleratorTextForegroundPressed" Color="#24766D" />
+     <SolidColorBrush x:Key="FlyoutPresenterBackground" Color="#F6F1E6" />
+     <SolidColorBrush x:Key="FlyoutBorderThemeBrush" Color="#DEDFD6" />
+
+   <SolidColorBrush x:Key="Accent" Color="#24766D" />
+   <SolidColorBrush x:Key="Ink" Color="#303A35" />
+   <SolidColorBrush x:Key="Muted" Color="#718078" />
+   <SolidColorBrush x:Key="Paper" Color="#FCFAF5" />
+   <SolidColorBrush x:Key="Line" Color="#DEDFD6" />
+   <SolidColorBrush x:Key="AccentTint" Color="#EAF3EF" />
+   <SolidColorBrush x:Key="SelectedNavBackground" Color="#DDEFE8" />
+   <CornerRadius x:Key="OverlayCornerRadius">5</CornerRadius>
+   <CornerRadius x:Key="ComboBoxItemCornerRadius">5</CornerRadius>
+   <CornerRadius x:Key="ComboBoxHiglightBorderCornerRadius">5</CornerRadius>
+   <SolidColorBrush x:Key="SystemAccentColorBrush" Color="#24766D" />
+   <Color x:Key="SystemAccentColor">#24766D</Color>
+   <Color x:Key="SystemAccentColorDark1">#20685F</Color>
+   <Color x:Key="SystemAccentColorLight1">#3F8D82</Color>
+   <FontFamily x:Key="AppFontFamily">华文宋体</FontFamily>
+   <FontFamily x:Key="ContentControlThemeFontFamily">华文宋体</FontFamily>
+   <Style TargetType="TextBlock"><Setter Property="FontFamily" Value="{StaticResource AppFontFamily}" /><Setter Property="Foreground" Value="{StaticResource Ink}" /></Style>
+   <Style x:Key="Caption" TargetType="TextBlock"><Setter Property="FontFamily" Value="{StaticResource AppFontFamily}" /><Setter Property="FontSize" Value="12" /><Setter Property="Foreground" Value="{StaticResource Muted}" /><Setter Property="TextWrapping" Value="Wrap" /></Style>
+   <Style x:Key="PageHeading" TargetType="TextBlock"><Setter Property="FontFamily" Value="{StaticResource AppFontFamily}" /><Setter Property="FontSize" Value="30" /><Setter Property="FontWeight" Value="SemiBold" /><Setter Property="Foreground" Value="{StaticResource Accent}" /><Setter Property="Margin" Value="0,6,0,10" /></Style>
+   <Style x:Key="BrowserNavigationButton" TargetType="Button" BasedOn="{StaticResource DefaultButtonStyle}">
+    <Setter Property="Width" Value="36"/><Setter Property="Height" Value="34"/><Setter Property="MinWidth" Value="0"/><Setter Property="Padding" Value="7"/><Setter Property="CornerRadius" Value="5"/><Setter Property="Foreground" Value="{StaticResource Accent}"/>
+   </Style>
+   <!-- A compact navigation-only template keeps native Button keyboard/focus behavior,
+        without the default template's background transition or animated icon states. -->
+   <Style x:Key="NavButton" TargetType="Button" BasedOn="{StaticResource DefaultButtonStyle}">
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Left" />
+    <Setter Property="Padding" Value="13,11,16,11" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{StaticResource Ink}" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="3,0,0,0" />
+    <Setter Property="CornerRadius" Value="5" />
+    <Setter Property="FontFamily" Value="{StaticResource AppFontFamily}" />
+    <Setter Property="FontSize" Value="14" />
+    <Setter Property="UseSystemFocusVisuals" Value="True" />
+    <Setter Property="Template">
+     <Setter.Value>
+      <ControlTemplate TargetType="Button">
+       <ContentPresenter x:Name="NavContent" Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}"
+        Background="{TemplateBinding Background}" Foreground="{TemplateBinding Foreground}" BorderBrush="{TemplateBinding BorderBrush}"
+        BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="{TemplateBinding CornerRadius}" Padding="{TemplateBinding Padding}"
+        HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"
+        BackgroundSizing="{TemplateBinding BackgroundSizing}" ContentTransitions="{TemplateBinding ContentTransitions}"
+        Control.IsTemplateFocusTarget="True" AutomationProperties.AccessibilityView="Raw">
+        <VisualStateManager.VisualStateGroups>
+         <VisualStateGroup x:Name="CommonStates">
+          <VisualState x:Name="Normal" />
+          <VisualState x:Name="PointerOver"><VisualState.Setters>
+           <Setter Target="NavContent.Background" Value="{StaticResource AccentTint}" />
+          </VisualState.Setters></VisualState>
+          <VisualState x:Name="Pressed"><VisualState.Setters>
+           <Setter Target="NavContent.Background" Value="{StaticResource SelectedNavBackground}" />
+          </VisualState.Setters></VisualState>
+          <VisualState x:Name="Disabled"><VisualState.Setters>
+           <Setter Target="NavContent.Foreground" Value="{ThemeResource ButtonForegroundDisabled}" />
+          </VisualState.Setters></VisualState>
+         </VisualStateGroup>
+        </VisualStateManager.VisualStateGroups>
+       </ContentPresenter>
+      </ControlTemplate>
+     </Setter.Value>
+    </Setter>
+   </Style>
+   <!-- SelectPage must switch Style as well as selection; no pointer/press brush,
+        icon animation, content transition, or background transition changes this chrome. -->
+   <Style x:Key="SelectedNavButton" TargetType="Button" BasedOn="{StaticResource NavButton}">
+    <Setter Property="Background" Value="{StaticResource SelectedNavBackground}" />
+    <Setter Property="BorderBrush" Value="{StaticResource Accent}" />
+    <Setter Property="Foreground" Value="{StaticResource Accent}" />
+    <Setter Property="Transitions" Value="{x:Null}" />
+    <Setter Property="ContentTransitions" Value="{x:Null}" />
+    <Setter Property="Template">
+     <Setter.Value>
+      <ControlTemplate TargetType="Button">
+       <ContentPresenter x:Name="NavContent" Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}"
+        Background="{TemplateBinding Background}" Foreground="{TemplateBinding Foreground}" BorderBrush="{TemplateBinding BorderBrush}"
+        BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="{TemplateBinding CornerRadius}" Padding="{TemplateBinding Padding}"
+        HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"
+        BackgroundSizing="{TemplateBinding BackgroundSizing}" BackgroundTransition="{x:Null}" ContentTransitions="{x:Null}" Transitions="{x:Null}"
+        Control.IsTemplateFocusTarget="True" AutomationProperties.AccessibilityView="Raw">
+        <VisualStateManager.VisualStateGroups>
+         <VisualStateGroup x:Name="CommonStates">
+          <VisualState x:Name="Normal" />
+          <VisualState x:Name="PointerOver"><VisualState.Setters>
+           <Setter Target="NavContent.Background" Value="{StaticResource SelectedNavBackground}" />
+           <Setter Target="NavContent.BorderBrush" Value="{StaticResource Accent}" />
+           <Setter Target="NavContent.Foreground" Value="{StaticResource Accent}" />
+          </VisualState.Setters></VisualState>
+          <VisualState x:Name="Pressed"><VisualState.Setters>
+           <Setter Target="NavContent.Background" Value="{StaticResource SelectedNavBackground}" />
+           <Setter Target="NavContent.BorderBrush" Value="{StaticResource Accent}" />
+           <Setter Target="NavContent.Foreground" Value="{StaticResource Accent}" />
+          </VisualState.Setters></VisualState>
+          <VisualState x:Name="Disabled" />
+         </VisualStateGroup>
+        </VisualStateManager.VisualStateGroups>
+       </ContentPresenter>
+      </ControlTemplate>
+     </Setter.Value>
+    </Setter>
+   </Style>
+   <Style x:Key="AmifolioDialogStyle" TargetType="ContentDialog" BasedOn="{StaticResource DefaultContentDialogStyle}">
+    <Setter Property="Background" Value="{StaticResource Paper}" />
+    <Setter Property="Foreground" Value="{StaticResource Ink}" />
+    <Setter Property="BorderBrush" Value="{StaticResource Line}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="5" />
+    <Setter Property="FontFamily" Value="{StaticResource AppFontFamily}" />
+    <Setter Property="RequestedTheme" Value="Light" />
+   </Style>
+   <Style TargetType="Button"><Setter Property="CornerRadius" Value="5" /><Setter Property="FontFamily" Value="{StaticResource AppFontFamily}" /><Setter Property="Padding" Value="14,9" /></Style>
+   <Style TargetType="TextBox"><Setter Property="FontFamily" Value="{StaticResource AppFontFamily}" /><Setter Property="CornerRadius" Value="5" /><Setter Property="Background" Value="{StaticResource Paper}" /></Style>
+   <Style TargetType="ComboBox" BasedOn="{StaticResource DefaultComboBoxStyle}"><Setter Property="FontFamily" Value="{StaticResource AppFontFamily}" /><Setter Property="CornerRadius" Value="5" /></Style>
+   <Style TargetType="ComboBoxItem" BasedOn="{StaticResource DefaultComboBoxItemStyle}"><Setter Property="FontFamily" Value="{StaticResource AppFontFamily}" /><Setter Property="CornerRadius" Value="5" /></Style>
+   <Style TargetType="MenuFlyoutPresenter" BasedOn="{StaticResource DefaultMenuFlyoutPresenterStyle}">
+    <Setter Property="FontFamily" Value="{StaticResource AppFontFamily}" />
+    <Setter Property="Foreground" Value="{StaticResource Ink}" />
+    <Setter Property="CornerRadius" Value="5" />
+    <!-- Opaque cream must not pick up the desktop's white/gray acrylic backdrop. -->
+    <Setter Property="SystemBackdrop" Value="{x:Null}" />
+   </Style>
+   <Style TargetType="MenuFlyoutItem" BasedOn="{StaticResource DefaultMenuFlyoutItemStyle}"><Setter Property="FontFamily" Value="{StaticResource AppFontFamily}" /><Setter Property="CornerRadius" Value="5" /></Style>
+   <Style TargetType="MenuFlyoutSubItem" BasedOn="{StaticResource DefaultMenuFlyoutSubItemStyle}"><Setter Property="FontFamily" Value="{StaticResource AppFontFamily}" /><Setter Property="CornerRadius" Value="5" /></Style>
+   <Style TargetType="ToggleMenuFlyoutItem" BasedOn="{StaticResource DefaultToggleMenuFlyoutItemStyle}"><Setter Property="FontFamily" Value="{StaticResource AppFontFamily}" /><Setter Property="CornerRadius" Value="5" /></Style>
+   <Style TargetType="FlyoutPresenter" BasedOn="{StaticResource DefaultFlyoutPresenterStyle}"><Setter Property="FontFamily" Value="{StaticResource AppFontFamily}" /><Setter Property="Foreground" Value="{StaticResource Ink}" /><Setter Property="CornerRadius" Value="5" /></Style>
+  </ResourceDictionary>
+ </Application.Resources>
+</Application>
