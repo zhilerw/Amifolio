@@ -17,7 +17,7 @@ public sealed record CatalogResult<T>(IReadOnlyList<T> Items, bool Truncated, IR
 /// Explicit project registries are authoritative. Session-only discovery is a labeled fallback,
 /// not a claim to reproduce the official Codex sidebar. Revalidate before opening a file.
 /// </summary>
-public sealed class CodexCatalog
+public sealed partial class CodexCatalog
 {
     public const int MaxMetadataBytes = 4 * 1024 * 1024;
     public const int MaxSessionHeaderBytes = 256 * 1024;

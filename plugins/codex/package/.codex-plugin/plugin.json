@@ -1,6 +1,6 @@
 {
   "name": "amifolio",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "在 Codex 使用已确认的创作偏好并登记作品。",
   "hooks": "./hooks/hooks.json",
   "mcpServers": "./.mcp.json",

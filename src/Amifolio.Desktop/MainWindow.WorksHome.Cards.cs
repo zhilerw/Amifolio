@@ -65,10 +65,13 @@ public sealed partial class MainWindow
     private GridViewItem CreateWorksHomeCard(WorksHomeCardEntry entry, CancellationToken token)
     {
         var work = entry.Card.Work;
-        var metadata = $"{work.SourceLabel} · {entry.ProjectName}";
+        var metadata = entry.Card.SessionTitle is { } sessionTitle
+            ? $"{sessionTitle} · {work.SourceLabel} · {entry.ProjectName}"
+            : $"{work.SourceLabel} · {entry.ProjectName}";
         var caption = WorksHomeCaption(metadata);
         caption.MaxLines = 1;
         caption.TextTrimming = TextTrimming.CharacterEllipsis;
+        ToolTipService.SetToolTip(caption, metadata);
         var date = WorksHomeCaption(work.RecordedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm"));
         var title = new TextBlock
         {
@@ -198,11 +201,14 @@ public sealed partial class MainWindow
         };
     }
 
-    private async Task<BitmapImage?> ReadWorksHomeImageAsync(CodexWorkCard card, int pixelLimit, CancellationToken token)
+    private Task<BitmapImage?> ReadWorksHomeImageAsync(CodexWorkCard card, int pixelLimit, CancellationToken token) =>
+        ReadBoundedCardImageAsync(() => SourceStore.OpenCodexWorkImageAsync(card.Work, card.ImageModifiedAt, token), pixelLimit, token);
+
+    private static async Task<BitmapImage?> ReadBoundedCardImageAsync(Func<Task<Stream?>> open, int pixelLimit, CancellationToken token)
     {
         try
         {
-            using var input = await SourceStore.OpenCodexWorkImageAsync(card.Work, card.ImageModifiedAt, token);
+            using var input = await open();
             if (input is null) return null;
             using var stream = input.AsRandomAccessStream();
             token.ThrowIfCancellationRequested();

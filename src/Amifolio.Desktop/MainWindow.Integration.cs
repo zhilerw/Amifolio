@@ -11,7 +11,10 @@ public sealed partial class MainWindow
 {
     private CodexIntegrationService integration=null!;
     private async void IntegrationScopeChanged(object sender,SelectionChangedEventArgs e)
-    {if(!ready||updating||operation is not null)return;await RunAsync("读取接入范围",async _=>{await LoadCollectionGrantStatusAsync();await RefreshEnvironmentAsync();});}
+    {
+        if (!ready || updating) return;
+        await RefreshEnvironmentAsync();
+    }
     private void InitializeIntegration()
     {
         // Native verification explicitly redirects all host writes away from the user's real configuration.
@@ -20,23 +23,48 @@ public sealed partial class MainWindow
         var home=profile?Environment.GetEnvironmentVariable("CODEX_HOME"):isolated is null?null:Path.Combine(isolated,".codex");
         integration=new CodexIntegrationService(home,isolated);
         CodexConfigPath.Text=integration.ConfigPath;CodexSkillPath.Text=integration.SkillDirectory;
+        CodexHooksPath.Text=integration.HooksPath;
         BridgeCommand.Text=integration.McpSnippet(BridgeExecutable(),dataRoot);
     }
-    private async void ShowNativePluginSetup(object sender, RoutedEventArgs e) =>
-        await RunAsync("查看 Codex 插件安装", async _ =>
+    private async void RunPluginConnectionAction(object sender, RoutedEventArgs e) =>
+        await RunAsync("检查 Codex 插件", async _ =>
         {
-            var root = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "codex", "marketplace"));
-            var catalog = Path.Combine(root, ".agents", "plugins", "marketplace.json");
-            var text = File.Exists(catalog)
-                ? $"在 Codex 插件设置中添加本地市场目录，安装 Amifolio 后按提示信任钩子。\n\n{root}"
-                : "请使用包含 codex/marketplace 的完整 1.1 预发行包，再从 Codex 插件设置添加本地市场。";
-            await ShowMessageAsync("安装 Amifolio 插件", text + "\n\n已有 Amifolio 独立 MCP 或结束钩子时，启用插件前先停用对应的旧接入。");
+            await RefreshEnvironmentAsync(force: true);
+            if (closing) return;
+            if (pluginConnectionState != CodexPluginState.NotConfigured)
+            {
+                var instructions = pluginConnectionState switch
+                {
+                    CodexPluginState.Enabled => "在 Codex 的已安装插件中打开 Amifolio，核对插件和钩子授权。然后新开会话，检查 Amifolio 工具是否可用。",
+                    CodexPluginState.Disabled => "请在 Codex 的已安装插件中启用 Amifolio，并检查钩子授权。",
+                    _ => "请在 Codex 的已安装插件中核对 Amifolio 的状态。若本机配置仍无法读取，可在「迁移与兼容」查看检查结果。"
+                };
+                await ShowMessageAsync("检查连接", instructions);
+                return;
+            }
+
+            await ShowNativePluginSetupAsync();
         });
+
+    private async void ShowNativePluginSetup(object sender, RoutedEventArgs e) =>
+        await RunAsync("查看插件安装方法", _ => ShowNativePluginSetupAsync());
+
+    private Task ShowNativePluginSetupAsync()
+    {
+        var root = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "codex", "marketplace"));
+        var catalog = Path.Combine(root, ".agents", "plugins", "marketplace.json");
+        var text = File.Exists(catalog)
+            ? $"在 Codex 插件设置中添加本地市场目录，安装 Amifolio 后按提示信任钩子。\n\n{root}"
+            : "请使用包含 codex/marketplace 的完整安装包，再从 Codex 插件设置添加本地市场。";
+        if (pluginLegacyEntries.Count > 0)
+            text += "\n\n启用插件前，请在「迁移与兼容」核对已检测到的旧接入，避免重复启用。";
+        return ShowMessageAsync("安装 Amifolio 插件", text);
+    }
 
     private static TextBox PreviewBox(string text)=>new(){Text=text,IsReadOnly=true,AcceptsReturn=true,TextWrapping=TextWrapping.Wrap,FontFamily=(Microsoft.UI.Xaml.Media.FontFamily)Application.Current.Resources["AppFontFamily"],FontSize=12,Width=540,Height=310};
     private void CopyText(string text,string status){var payload=new DataPackage();payload.SetText(text);Clipboard.SetContent(payload);StatusText.Text=status;}
     private async void ViewCodexConfig(object sender,RoutedEventArgs e)=>await RunAsync("读取 Codex 配置",async token=>{var snap=await integration.ReadConfigAsync(token);await ShowMessageAsync("config.toml",PreviewBox(snap.Exists?snap.Content[..Math.Min(snap.Content.Length,120000)]:"文件尚不存在，写入 MCP 时创建。"));});
-    private async void OpenCodexConfig(object sender,RoutedEventArgs e)=>await RunAsync("打开 Codex 配置",async token=>{var snap=await integration.ReadConfigAsync(token);if(!snap.Exists){await ShowMessageAsync("文件不存在","可先点击“一键写入”，或自行创建 config.toml。");return;}Process.Start(new ProcessStartInfo("notepad.exe"){UseShellExecute=false,ArgumentList={integration.ConfigPath}});});
+    private async void OpenCodexConfig(object sender,RoutedEventArgs e)=>await RunAsync("打开 Codex 配置",async token=>{var snap=await integration.ReadConfigAsync(token);if(!snap.Exists){await ShowMessageAsync("文件不存在","可点击「备份并写入」，或自行创建 config.toml。");return;}Process.Start(new ProcessStartInfo("notepad.exe"){UseShellExecute=false,ArgumentList={integration.ConfigPath}});});
     private async void InstallMcp(object sender,RoutedEventArgs e)=>await RunAsync("配置 MCP",async token=>
     {
         if(!File.Exists(BridgeExecutable()))throw new IOException("桥接组件缺失，请使用完整便携包。");
@@ -44,7 +72,7 @@ public sealed partial class MainWindow
         var proposed=integration.PreviewMcpUpdate(snapshot,snippet);
         if(!await ConfirmAsync("配置 MCP 连接？",PreviewBox(integration.ConfigPath+"\n\n"+MakeDiff(snapshot.Content,proposed)),"备份并写入"))return;
         await integration.SaveMcpUpdateAsync(snapshot,proposed,token);StatusText.Text="MCP 已配置，请手动重新打开 Codex";
-        await RefreshEnvironmentAsync();
+        await RefreshEnvironmentAsync(force: true);
         await ShowMessageAsync("配置已写入","请手动退出并重新打开 Codex，再检查 MCP 连接。");
     });
     private async Task<string> BundledSkillAsync(CancellationToken token)
@@ -64,15 +92,45 @@ public sealed partial class MainWindow
         if(!await ConfirmAsync(snapshot.Exists?"更新配套 skills？":"安装配套 skills？",PreviewBox(integration.SkillDirectory+"\n\n"+MakeDiff(snapshot.Content,text)),"备份并安装"))return;
         if(snapshot.Exists)await integration.ReplaceSkillAsync(snapshot,text,token);else await integration.InstallSkillAsync(text,token);
         StatusText.Text="skills 已安装，请重新打开 Codex 会话";
-        await RefreshEnvironmentAsync();
+        await RefreshEnvironmentAsync(force: true);
     });
     private async void GoToAgents(object sender,RoutedEventArgs e)
     {
-        if(operation is not null)return;var scope=SelectedScope(IntegrationScope)?.Id;
-        if(!await RequestNavigationAsync("agents"))return;
-        await RunAsync("读取部署范围",async _=>{updating=true;try{AgentsScope.SelectedItem=AgentsScope.Items.OfType<ScopeChoice>().First(x=>x.Id==scope);}finally{updating=false;}await LoadAgentsForScopeAsync();});
+        await GoToIntegrationAgentsAsync();
     }
-    private string? DeployScope=>currentPage=="agents"?SelectedScope(AgentsScope)?.Id:SelectedScope(IntegrationScope)?.Id;
+
+    private async Task<bool> GoToIntegrationAgentsAsync()
+    {
+        if (operation is not null || currentPage != "connections") return false;
+        var scope = SelectedScope(IntegrationScope)?.Id;
+        var agentsScope = AgentsScope.Items.OfType<ScopeChoice>().FirstOrDefault(x => x.Id == scope);
+        if (agentsScope is null)
+        {
+            StatusText.Text = "所选项目已不可用，请重新选择部署范围。";
+            return false;
+        }
+        updating = true;
+        try { AgentsScope.SelectedItem = agentsScope; }
+        finally { updating = false; }
+        return await RequestNavigationAsync("agents");
+    }
+
+    private async void PrepareAgentsFromIntegration(object sender, RoutedEventArgs e)
+    {
+        var customPath = IntegrationDraftPath.Text.Trim();
+        if (!await GoToIntegrationAgentsAsync() || closing) return;
+        if (customPath.Length > 0)
+        {
+            AgentsPath.Text = customPath;
+            await RunAsync("读取指定指令文件", ReadAgentsAsync);
+        }
+        if (closing || currentPage != "agents" || !AgentsTargetMatchesPath || !agentsEdit.Begin()) return;
+        UpdateAgentsControls();
+        await PrepareAgentsAsync();
+        if (!closing && currentPage == "agents") AgentsEditor.Focus(FocusState.Programmatic);
+    }
+
+    private string? DeployScope => SelectedScope(IntegrationScope)?.Id;
     private string DeployPath(string? project)
     {
         if(project is null)return Path.Combine(integration.CodexHome,"AGENTS.md");
@@ -94,12 +152,13 @@ public sealed partial class MainWindow
             agentsUndo.Clear();
             var saved = await agents.ReadAsync(path, token);
             var matched = TrackAgentsWrite(saved, proposed, backup);
-            if (currentPage == "agents")
+            if (currentPage == "agents" && loadedAgentsScopeId == scope &&
+                StringComparer.OrdinalIgnoreCase.Equals(AgentsPath.Text.Trim(), path))
             {
                 AgentsPath.Text = path;
                 SetAgentsSnapshot(saved, matched ? "已配置指令入口" : "写入后文件又有变化，已显示磁盘版本。");
             }
-            await RefreshEnvironmentAsync();
+            await RefreshEnvironmentAsync(force: true);
             StatusText.Text = !matched ? "写入后文件又有变化。" :
                 policy.Share ? "风格与记忆入口已配置" : "共享已关闭，对应托管入口已移除。";
         });
@@ -108,6 +167,18 @@ public sealed partial class MainWindow
     {
         if(!File.Exists(BridgeExecutable()))throw new IOException("桥接组件缺失。");
         if(!await ConfirmAsync("安装 Codex 结束钩子？",integration.HooksPath+"\n保留已有事件。结束时只刷新Codex项目索引，不复制原文件。安装后需在Codex中检查并信任钩子。","安装"))return;
-        await integration.InstallStopHookAsync(BridgeExecutable(),dataRoot,token);StatusText.Text="钩子已安装，请重新打开 Codex 并在设置中信任";
+        await integration.InstallStopHookAsync(BridgeExecutable(),dataRoot,token);
+        await RefreshEnvironmentAsync(force: true);
+        StatusText.Text="钩子已安装，请重新打开 Codex 并在设置中信任";
+    });
+    private async void OpenCodexHooks(object sender, RoutedEventArgs e) => await RunAsync("打开钩子配置", async token =>
+    {
+        var snapshot = await integration.ReadHooksAsync(token);
+        if (!snapshot.Exists)
+        {
+            await ShowMessageAsync("文件不存在", "安装旧版结束钩子时会创建 hooks.json。");
+            return;
+        }
+        Process.Start(new ProcessStartInfo("notepad.exe") { UseShellExecute = false, ArgumentList = { snapshot.Path } });
     });
 }

@@ -53,23 +53,46 @@ public sealed partial class MainWindow
     }
     private async void OpenLearning(object sender,RoutedEventArgs e)=>await OpenLearningPageAsync(false);
     private async void OpenLearningLogs(object sender,RoutedEventArgs e)=>await OpenLearningPageAsync(true);
-    private async Task<bool> OpenLearningPageAsync(bool logs,string? selectedScope=null,bool explicitScope=false,string? returnPage=null)
+    private async Task<bool> OpenLearningPageAsync(bool logs,string? selectedScope=null,bool explicitScope=false,string? returnPage=null,string? entryId=null)
     {
         var scope=explicitScope?selectedScope:currentPage=="connections"?SelectedScope(IntegrationScope)?.Id:loadedLearningScope;
         var origin=returnPage ?? (explicitScope?"context":currentPage=="learning"?learningReturnPage:currentPage);
         if(currentPage=="learning"&&!await CanLeaveLearningAsync())return false;
-        if(!await RequestNavigationAsync("learning"))return false;
-        learningReturnPage=origin;SelectPage("learning");
-        loadingLearning=true;
-        try
+        return await RequestNavigationAsync("learning", () =>
         {
-            SetScopes(LearningPage.Scope,"全局偏好");
-            LearningPage.Scope.SelectedItem=LearningPage.Scope.Items.OfType<ScopeChoice>().FirstOrDefault(s=>s.Id==scope)??LearningPage.Scope.Items[0];
-            LearningPage.Kind.SelectedIndex=logs?1:0;
-        }
-        finally{loadingLearning=false;}
-        await LearningUiAsync(()=>RefreshLearningPageAsync());
-        return true;
+            learningReturnPage=origin;
+            loadingLearning=true;
+            try
+            {
+                SetScopes(LearningPage.Scope,"全局偏好");
+                LearningPage.Scope.SelectedItem=LearningPage.Scope.Items.OfType<ScopeChoice>().FirstOrDefault(s=>s.Id==scope)??LearningPage.Scope.Items[0];
+                LearningPage.Kind.SelectedIndex=logs?1:0;
+                if(entryId is not null)LearningPage.StateFilter.SelectedIndex=0;
+                learningKindIndex=LearningPage.Kind.SelectedIndex;learningStateIndex=LearningPage.StateFilter.SelectedIndex;
+                LearningPage.Rows.ItemsSource=null;
+                LearningPage.Title.Text="正在读取…";
+                LearningPage.Editor.Text=LearningPage.Evidence.Text="";
+                LearningPage.Status.Text="正在读取所选范围…";
+                LearningPage.Coverage.Text=LearningPage.Service.Text=LearningPage.Capacity.Text="";
+                if(loadedLearningScope!=scope)
+                {
+                    learningSnapshot=null;learningEntry=null;
+                    foreach(var box in new[]{LearningPage.Capture,LearningPage.Learn,LearningPage.Activate,LearningPage.Share,LearningPage.Contribute,LearningPage.Remote})
+                        box.IsChecked=false;
+                }
+            }
+            finally{loadingLearning=false;}
+        }, () => LearningUiAsync(async()=>
+        {
+            await RefreshLearningPageAsync();
+            if(entryId is null||LearningScopeId!=scope)return;
+            var selected=LearningPage.Rows.Items.OfType<LearningRow>().FirstOrDefault(row=>row.Item is LearningEntry preference&&preference.Id==entryId);
+            if(selected is null)return;
+            loadingLearning=true;
+            try{LearningPage.Rows.SelectedItem=selected;}
+            finally{loadingLearning=false;}
+            await ShowLearningSelectionAsync();
+        }));
     }
     private LearningPolicy LearningOptions(bool useLoadedScope=false)
     {

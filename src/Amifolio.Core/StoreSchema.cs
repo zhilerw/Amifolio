@@ -47,6 +47,8 @@ internal static class StoreSchema
         c.CommandText="INSERT OR IGNORE INTO store_meta VALUES('format_version','1')";c.ExecuteNonQuery();
         c.CommandText="SELECT value FROM store_meta WHERE key='format_version'";if(c.ExecuteScalar() as string!="1")throw new IOException("不支持此仓库文件格式。");
         EnsureQueryIndex(c);
+        c.CommandText="SELECT 1 FROM sqlite_master WHERE type='table' AND name='codex_works'";
+        if(c.ExecuteScalar() is not null){c.CommandText=PortfolioStore.WorkReferenceIndex;c.ExecuteNonQuery();}
         // Restore validates its owned <root>.restore-<guid> staging directory here
         // before the atomic exchange. A backup's persistent ID must not be reused by
         // an already-open store at the destination, even if its revision is identical.

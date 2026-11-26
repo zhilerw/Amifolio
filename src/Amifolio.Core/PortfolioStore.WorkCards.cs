@@ -1,7 +1,10 @@
+using Microsoft.Data.Sqlite;
+
 namespace Amifolio.Core;
 
 public sealed record CodexWorkCard(CodexWork Work, string Excerpt, DateTimeOffset? ImageModifiedAt)
 {
+    public string? SessionTitle { get; init; }
     public bool HasImage => ImageModifiedAt is not null;
 }
 
@@ -10,19 +13,51 @@ public sealed partial class PortfolioStore
     private const int WorkCardExcerptLimit = 480;
 
     public Task<IReadOnlyList<CodexWorkCard>> ListCodexWorkCardsAsync(string projectId, string search, int limit,
-        CancellationToken ct) => DbAsync<IReadOnlyList<CodexWorkCard>>(db =>
+        CancellationToken ct) => QueryCodexWorkCardsAsync(projectId, "instr(lower(w.title),lower($value))>0",
+            search.Trim(), Math.Clamp(limit, 0, 120), ct);
+
+    public async Task<CodexWorkCard?> GetCodexWorkCardForReferenceAsync(string projectId, string referenceId,
+        CancellationToken ct) =>
+        (await QueryCodexWorkCardsAsync(projectId, "w.reference_id=$value", referenceId, 1, ct,
+            indexHint: "INDEXED BY ix_codex_works_reference")
+            .ConfigureAwait(false)).SingleOrDefault();
+
+    public async Task<CodexWorkCard?> GetCodexWorkCardAsync(string projectId, string workId, CancellationToken ct) =>
+        (await QueryCodexWorkCardsAsync(projectId, "w.id=$value", workId, 1, ct)
+            .ConfigureAwait(false)).SingleOrDefault();
+
+    private Task<IReadOnlyList<CodexWorkCard>> QueryCodexWorkCardsAsync(string projectId, string predicate,
+        string value, int limit, CancellationToken ct, string indexHint = "") => DbAsync<IReadOnlyList<CodexWorkCard>>(db =>
     {
         var project = CodexProjects.FirstOrDefault(p => p.Id == projectId);
         if (project is null || !HasWorks(db)) return [];
 
-        using var command = Command(db, """
+        using var command = Command(db, $"""
             SELECT a.*, w.id, w.session, w.turn, w.kind, w.title, w.reference_id, w.recorded
-            FROM codex_works w
+            FROM codex_works w {indexHint}
             LEFT JOIN artifacts a ON a.id=w.reference_id AND a.project_id=w.project AND a.deleted=0
                 AND a.object_name LIKE 'ref:%'
-            WHERE w.project=$project AND instr(lower(w.title),lower($search))>0
+            WHERE w.project=$project AND {predicate}
             ORDER BY w.recorded DESC, w.title, w.id LIMIT $limit
-            """, ("$project", projectId), ("$search", search.Trim()), ("$limit", Math.Clamp(limit, 0, 120)));
+            """, ("$project", projectId), ("$value", value), ("$limit", limit));
+        var cards = ReadWorkCards(command, project, ct);
+        if (cards.Count == 0 || Convert.ToInt32(LearningSchema.Scalar(db, null,
+            "SELECT enabled FROM codex_work_sync WHERE project=$project", ("$project", projectId))) != 1) return cards;
+
+        var sessions = cards.Select(card => Guid.TryParseExact(card.Work.SessionId, "D", out var id) ? (Guid?)id : null)
+            .OfType<Guid>().ToHashSet();
+        var titles = Catalog.ReadSessionTitles(sessions, ct);
+        for (var i = 0; i < cards.Count; i++)
+        {
+            var card = cards[i];
+            if (Guid.TryParseExact(card.Work.SessionId, "D", out var id) && titles.TryGetValue(id, out var title))
+                cards[i] = card with { SessionTitle = title };
+        }
+        return cards;
+    }, ct);
+
+    private List<CodexWorkCard> ReadWorkCards(SqliteCommand command, CodexProject project, CancellationToken ct)
+    {
         using var rows = command.ExecuteReader();
         var cards = new List<CodexWorkCard>();
         var offset = rows.FieldCount - 7;
@@ -47,19 +82,25 @@ public sealed partial class PortfolioStore
                     imageModifiedAt = artifact.CreatedAt;
             }
 
-            var work = new CodexWork(rows.GetString(offset), projectId, rows.GetString(offset + 1),
+            var work = new CodexWork(rows.GetString(offset), project.Id, rows.GetString(offset + 1),
                 rows.GetString(offset + 2), rows.GetString(offset + 3), title, reference,
                 DateTimeOffset.FromUnixTimeMilliseconds(rows.GetInt64(offset + 6)), availability);
             cards.Add(new(work, excerpt, imageModifiedAt));
         }
         return cards;
-    }, ct);
+    }
 
     public async Task<Stream?> OpenCodexWorkImageAsync(CodexWork work, DateTimeOffset? expectedModifiedAt, CancellationToken ct)
     {
         if (!IsWorkCardImage(work.Title)) return null;
         var candidate = await FindCodexWorkReferenceAsync(work, ct).ConfigureAwait(false);
         var project = CodexProjects.FirstOrDefault(p => p.Id == work.ProjectId);
+        return await OpenScopedCardImageAsync(project, candidate, expectedModifiedAt, ct).ConfigureAwait(false);
+    }
+
+    private async Task<Stream?> OpenScopedCardImageAsync(CodexProject? project, ArtifactRecord? candidate,
+        DateTimeOffset? expectedModifiedAt, CancellationToken ct)
+    {
         if (candidate is not { IsReference: true, Bytes: > 0 and <= CodexCatalog.MaxReadBytes } || project is null ||
             candidate.CreatedAt != expectedModifiedAt ||
             !IsWorkCardImage(candidate.OriginalName) || !IsWorkCardImage(candidate.ObjectPath) ||

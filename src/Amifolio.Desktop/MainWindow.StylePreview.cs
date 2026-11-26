@@ -174,7 +174,8 @@ public sealed partial class MainWindow
             Voice = draft.Voice ?? "",
             ReferenceId = saved.ReferenceId,
             ReferenceName = saved.ReferenceName,
-            ReferencePart = saved.ReferencePart
+            ReferencePart = saved.ReferencePart,
+            ReferenceWorkId = saved.ReferenceWorkId
         };
         return true;
     }
@@ -206,7 +207,7 @@ public sealed partial class MainWindow
     }
 
     private static CreativeStyle? WithoutReference(CreativeStyle? style) =>
-        style is null ? null : style with { ReferenceId = null, ReferenceName = null, ReferencePart = null };
+        style is null ? null : style with { ReferenceId = null, ReferenceName = null, ReferencePart = null, ReferenceWorkId = null };
 
     private bool CreativeHasDraft => creativeDraft is { } draft && draft != (loadedCreative?.Style ?? EmptyCreativeStyle);
 
@@ -225,8 +226,6 @@ public sealed partial class MainWindow
             loadedCreative?.State == "active" ? "已保存 · 会提供给 Codex" :
             loadedCreative is not null ? "已暂停 · 新会话暂不接收这份偏好" :
             "点选示例元素开始编辑。");
-        if (loadedCreative?.Style is { ReferenceName: { Length: > 0 } name, ReferencePart: { Length: > 0 } part })
-            status += $"\n范例 · {name} · 沿用 {part}";
         if (creativeGlobalDefaults is not null && creativeLoaded && !creativeBusy)
             status += "\n未设置的字段沿用已启用的全局默认值。";
         CreativeStatus.Text = status;
@@ -238,6 +237,7 @@ public sealed partial class MainWindow
         creativeLoaded = false;
         loadedCreative = null;
         creativeDraft = null;
+        ResetCreativeNow();
         await RunCreativeActionAsync(LoadSelectedCreativeAsync);
     }
 
@@ -257,6 +257,7 @@ public sealed partial class MainWindow
         creativeDraft = null;
         creativeLoaded = true;
         SendCreativePreview();
+        RefreshCreativeNow();
     }
 
     private async Task RunCreativeActionAsync(Func<Task> action)
@@ -315,6 +316,7 @@ public sealed partial class MainWindow
         var choice = SelectedScope(CreativeScope);
         creativeUpdatingScope = true;
         CreativeScope.IsEnabled = false;
+        SetCreativeNowActionsEnabled(false);
         try
         {
             if (!await CanLeaveCreativeAsync())
@@ -329,6 +331,7 @@ public sealed partial class MainWindow
         {
             creativeUpdatingScope = false;
             CreativeScope.IsEnabled = !creativeBusy;
+            SetCreativeNowActionsEnabled(true);
         }
         await ReadCreativeScopeAsync();
     }
@@ -356,6 +359,7 @@ public sealed partial class MainWindow
             }
             creativeDraft = null;
             SendCreativePreview();
+            RefreshCreativeNow();
         });
     }
 

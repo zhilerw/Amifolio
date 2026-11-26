@@ -50,7 +50,7 @@ public sealed partial class MainWindow
         AgentsPath.Text = target;
         await ReadAgentsAsync();
         ToggleAgentsEdit(AgentsEditButton, new RoutedEventArgs());
-        Check(agentsEdit.IsEditing && !AgentsEditor.IsReadOnly && PrepareAgentsButton.IsEnabled && AgentsCancelButton.Visibility == Visibility.Visible, "AGENTS modify enables editing and managed-entry update");
+        Check(agentsEdit.IsEditing && !AgentsEditor.IsReadOnly && AgentsTargetMatchesPath && AgentsCancelButton.Visibility == Visibility.Visible, "AGENTS modify enables editing for the loaded target");
         AgentsEditor.Text += "\n未保存内容";
         CancelAgentsEdit(AgentsCancelButton, new RoutedEventArgs());
         Check(AgentsEditor.IsReadOnly && !AgentsHasChanges && await File.ReadAllTextAsync(target) == before, "AGENTS cancel restores content without disk writes");

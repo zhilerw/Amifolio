@@ -10,6 +10,7 @@ public sealed record CreativeStyle(string Font, string Color, string Style, stri
     public int? Spacing { get; init; }
     public int? Radius { get; init; }
     public string? SampleText { get; init; }
+    public string? ReferenceWorkId { get; init; }
 
     public bool HasValues() => Spacing.HasValue || Radius.HasValue ||
         !string.IsNullOrWhiteSpace(Font) || !string.IsNullOrWhiteSpace(Color) ||
@@ -74,15 +75,39 @@ public sealed partial class LearningStore
             if (!string.IsNullOrWhiteSpace(AsCreative(previous)?.Style.ReferenceId))
                 throw new InvalidOperationException("请先移除作品范例，再清除这份偏好。");
 
-            var removed = previous with
+            return ClearCreativeEntry(db, previous);
+        }, ct);
+
+    public Task<long> RemoveCreativeReferenceAsync(string projectId, long expectedRevision, CancellationToken ct = default) =>
+        UseAsync(db =>
+        {
+            var previous = ReadCreative(db, Key(projectId));
+            if (previous is null || previous.Revision != expectedRevision || AsCreative(previous)?.Style is not { ReferenceId: not null } style)
+                throw new InvalidOperationException("范例已被修改，请重新查看。");
+            var remaining = style with { ReferenceId = null, ReferenceName = null, ReferencePart = null, ReferenceWorkId = null };
+            if (!remaining.HasValues()) return ClearCreativeEntry(db, previous);
+
+            var edited = previous with
             {
-                Value = "", Text = "", Condition = "", State = "deleted", Reason = "user_cleared",
-                EvidenceIds = [], Revision = previous.Revision + 1, UpdatedAt = Now
+                Value = Serialize(remaining), Text = CreativeText(remaining), Reason = "user_edited",
+                Revision = previous.Revision + 1, UpdatedAt = Now
             };
             History(db, previous);
-            PutEntry(db, removed);
-            return removed.Revision;
+            PutEntry(db, edited);
+            return edited.Revision;
         }, ct);
+
+    private long ClearCreativeEntry(Db db, LearningEntry previous)
+    {
+        var removed = previous with
+        {
+            Value = "", Text = "", Condition = "", State = "deleted", Reason = "user_cleared",
+            EvidenceIds = [], Revision = previous.Revision + 1, UpdatedAt = Now
+        };
+        History(db, previous);
+        PutEntry(db, removed);
+        return removed.Revision;
+    }
 
     public Task<CreativePreference> UndoCreativeRemovalAsync(string? projectId, long expectedRevision,
         CancellationToken ct = default) => UseAsync(db =>
@@ -214,6 +239,9 @@ public sealed partial class LearningStore
         var name = Field(value.ReferenceName, 180);
         var part = Field(value.ReferencePart, 180);
         var reference = value.ReferenceId?.Trim() ?? "";
+        var work = value.ReferenceWorkId?.Trim();
+        if (work is not null && (reference.Length == 0 || work.Length != 64 || !work.All(char.IsAsciiHexDigitLower)))
+            throw new ArgumentException("作品来源无效。");
         if (reference.Length > 0 && (reference.Length != 68 || !reference.StartsWith("ref-", StringComparison.Ordinal) ||
             !reference.Skip(4).All(char.IsAsciiHexDigitLower)))
             throw new ArgumentException("范例引用无效。");
@@ -229,7 +257,8 @@ public sealed partial class LearningStore
             Background = background.Length == 0 ? null : background,
             Spacing = value.Spacing,
             Radius = value.Radius,
-            SampleText = sampleText.Length == 0 ? null : sampleText
+            SampleText = sampleText.Length == 0 ? null : sampleText,
+            ReferenceWorkId = work
         };
         if (!normalized.HasValues()) throw new ArgumentException("至少填写一项打算沿用的偏好。");
         return normalized;

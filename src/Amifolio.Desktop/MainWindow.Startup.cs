@@ -169,7 +169,7 @@ public sealed partial class MainWindow
             if(closing)return;
             catalogVerified=true;
             await RefreshProjectsAsync();
-            if (currentPage == "creative") RefreshCreativeScopes();
+            if (currentPage == "creative") { RefreshCreativeScopes(); RefreshCreativeNow(); }
             // Use the user's current location and filters. A late scan must not restore
             // the startup location after the user has already navigated elsewhere.
             await RefreshLibraryAsync();

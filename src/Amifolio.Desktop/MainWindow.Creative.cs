@@ -23,7 +23,7 @@ public sealed partial class MainWindow
     private async void ShowCodexWorks(object sender, RoutedEventArgs e) =>
         await RequestNavigationAsync("works");
 
-    private async Task EditCreativeAsync(string projectId, ArtifactRecord? favorite, CancellationToken ct)
+    private async Task EditCreativeAsync(string projectId, ArtifactRecord? favorite, CancellationToken ct, string? sourceWorkId = null)
     {
         var learning = CreativePreferences;
         var scope = new ComboBox { Header = "应用范围", ItemsSource = new[] { "当前项目", "全局" }, SelectedIndex = 0 };
@@ -116,7 +116,8 @@ public sealed partial class MainWindow
                 Voice = voice.Text,
                 ReferenceId = workId,
                 ReferenceName = workName,
-                ReferencePart = target is null ? null : part.Text
+                ReferencePart = target is null ? null : part.Text,
+                ReferenceWorkId = target is null ? null : favorite is null ? carried?.ReferenceWorkId : sourceWorkId
             };
             await learning.SaveCreativeAsync(target, draft, provide.IsChecked == true, expected, ct);
             StatusText.Text = "已保存创作偏好。";

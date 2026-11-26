@@ -38,15 +38,26 @@ public sealed partial class MainWindow
     private async Task<object> RunCollectionRegressionAsync()
     {
         var checks=new List<string>();void Check(bool value,string name){if(!value)throw new InvalidOperationException("Reference UI regression: "+name);checks.Add(name);}
+        var productNavigationChecks = new List<string>();
+        void CheckNavigation(bool value, string name)
+        {
+            if (!value) throw new InvalidOperationException("Product navigation regression: " + name);
+            productNavigationChecks.Add(name);
+        }
         // The isolated parser has a 30-second deadline; the test must wait past its result.
         async Task Idle(){using var timeout=new CancellationTokenSource(TimeSpan.FromSeconds(45));while(operation is not null||parsingFiles)await Task.Delay(20,timeout.Token);await Task.Delay(50,timeout.Token);}
         await NavigateAsync("connections");
         Check(integration.ConfigPath.StartsWith(dataRoot,StringComparison.OrdinalIgnoreCase),"host-configuration-isolated");
-        Check(AgentTarget.Items.Count==1&&AgentTarget.SelectedItem as string=="Codex","codex-only-selector");
+        Check(ConnectionsPage.Children.OfType<TextBlock>().Single().Text=="Codex 插件","codex-only-connection-page");
+        await RefreshEnvironmentAsync(force: true);
+        CheckNavigation(!MigrationCompatibility.IsExpanded && (string)PluginConnectionAction.Content == "安装插件" &&
+            PluginMigrationNotice.Visibility == Visibility.Collapsed, "fresh-setup-shows-install-and-collapses-compatibility");
         Check(CodexConfigPath.Text==integration.ConfigPath&&CodexSkillPath.Text==integration.SkillDirectory,"exact-setup-paths-visible");
         Directory.CreateDirectory(integration.CodexHome);await File.WriteAllTextAsync(integration.ConfigPath,"# user configuration\nmodel = 'synthetic-model'\n");
         smokeDialogAnswers.Enqueue(true);smokeMessages.Enqueue("配置已写入");InstallMcp(this,new RoutedEventArgs());await Idle();var config=await File.ReadAllTextAsync(integration.ConfigPath);
         Check(config.StartsWith("# user configuration")&&config.Contains("[mcp_servers.amifolio]"),"mcp-appends-without-overwrite");
+        CheckNavigation(PluginMigrationNotice.Visibility == Visibility.Visible && PluginMigrationNotice.Text.Contains("独立 MCP"),
+            "legacy-mcp-offers-migration");
         smokeDialogAnswers.Enqueue(true);smokeMessages.Enqueue("配置已写入");InstallMcp(this,new RoutedEventArgs());await Idle();Check(config==await File.ReadAllTextAsync(integration.ConfigPath),"mcp-repeat-idempotent");
         smokeDialogAnswers.Enqueue(true);InstallSkill(this,new RoutedEventArgs());await Idle();
         Check(string.IsNullOrEmpty((await modelConfiguration.LoadAsync()).ApiKey)&&await File.ReadAllTextAsync(Path.Combine(integration.SkillDirectory,"SKILL.md"))==await BundledSkillAsync(CancellationToken.None),"trusted-skill-exact-destination-without-key");
@@ -56,13 +67,32 @@ public sealed partial class MainWindow
         smokeDialogAnswers.Enqueue(true);DeployAgentsEntry(this,new RoutedEventArgs());await Idle();var globalText=await File.ReadAllTextAsync(global);
         Check(globalText.StartsWith("# User rules\nKeep these.\n")&&globalText.Contains("---\n<!-- folio:begin"),"global-entry-appends-with-separators");
         smokeDialogAnswers.Enqueue(true);DeployAgentsEntry(this,new RoutedEventArgs());await Idle();Check(globalText==await File.ReadAllTextAsync(global),"entry-repeat-idempotent");
+        var customAgentsPath = Path.Combine(dataRoot, "compatibility-draft", "AGENTS.md");
+        Directory.CreateDirectory(Path.GetDirectoryName(customAgentsPath)!);
+        const string customAgentsText = "# Custom rules\n";
+        await File.WriteAllTextAsync(customAgentsPath, customAgentsText);
+        IntegrationDraftPath.Text = customAgentsPath;
+        PrepareAgentsFromIntegration(this, new RoutedEventArgs()); await Idle();
+        CheckNavigation(currentPage == "agents" && AgentsHasChanges && DocumentEditState.Normalize(AgentsEditor.Text).Contains(customAgentsText) &&
+            AgentsEditor.Text.Contains("folio:begin") && await File.ReadAllTextAsync(customAgentsPath) == customAgentsText,
+            "migration-prepares-custom-agents-draft-without-saving");
+        CancelAgentsEdit(this, new RoutedEventArgs()); await Idle();
+        IntegrationDraftPath.Text = "";
+        await NavigateAsync("connections");
         GoToAgents(this,new RoutedEventArgs());await Idle();Check(currentPage=="agents"&&AgentsEditor.IsReadOnly,"entry-jump-read-only");
         var project=await SetupCatalogSmokeAsync();var source=Path.Combine(project.RootPath,"notes.md");var before=await File.ReadAllTextAsync(source);var time=File.GetLastWriteTimeUtc(source);
         Check(projects.Count==1&&ProjectsList.Items.Count==1,"projects-from-real-codex-registry");
-        await NavigateAsync("library");await ShowBrowserAsync(null);
+        await NavigateAsync("settings");
+        CheckNavigation(!AdvancedSettings.IsExpanded && Equals(ProjectFilesButton.Content, "项目文件"),
+            "project-files-are-under-collapsed-advanced-settings");
+        AdvancedSettings.IsExpanded = true;
+        Navigate(ProjectFilesButton, new RoutedEventArgs()); await Idle();
+        CheckNavigation(currentPage == "library" && SettingsNav.Style == (Style)Application.Current.Resources["SelectedNavButton"],
+            "project-files-action-opens-browser-under-settings");
+        await ShowBrowserAsync(null);
         Check(ArtifactList.Items.Count==1&&ArtifactList.Items.OfType<ArtifactItem>().Single().IsDirectory,"all-projects-default-root");Root.UpdateLayout();
         Check(ArtifactList.ItemsPanelRoot is ItemsWrapGrid,"medium-icon-virtualized-grid");
-        Check(LibraryHeading.Text=="作品"&&Root.FindName("ProjectFilter") is null,"work-title-and-no-project-dropdown");
+        Check(LibraryHeading.Text=="项目文件"&&Root.FindName("ProjectFilter") is null,"project-files-title-and-no-project-dropdown");
         Check(Root.FindName("ImportButton") is null&&Root.FindName("EditTitle") is null&&Root.FindName("EditProject") is null,"no-upload-or-metadata-edit-controls");
         await ShowBrowserAsync(project);Check(ArtifactList.Items.Count==2&&ArtifactList.Items.OfType<ArtifactItem>().Count(x=>x.IsDirectory)==1,"immediate-hierarchy-not-flattened");
         Check((await store.ListAsync()).Count==0,"structure-scan-does-not-parse-or-index-content");
@@ -95,13 +125,19 @@ public sealed partial class MainWindow
         smokeDialogAnswers.Enqueue(true);DeployAgentsEntry(this,new RoutedEventArgs());await Idle();Check(File.Exists(Path.Combine(project.RootPath,"AGENTS.md")),"explicit-config-exception-project-entry");
         Check(await File.ReadAllTextAsync(global)==globalText,"project-entry-does-not-touch-global");
         smokeDialogAnswers.Enqueue(true);InstallCollectionHook(this,new RoutedEventArgs());await Idle();Check(File.Exists(integration.HooksPath),"metadata-hook-installs-isolated");
+        await File.AppendAllTextAsync(integration.ConfigPath, "\n[plugins.\"amifolio@amifolio-local\"]\nenabled = true\n");
+        MigrationCompatibility.IsExpanded = true;
+        await RefreshEnvironmentAsync(force: true, showDetails: true);
+        CheckNavigation((string)PluginConnectionAction.Content == "检查连接" &&
+            PluginConnectionSummary.Text.Contains("会话中确认") &&
+            PluginMigrationNotice.Text.Contains("独立结束钩子"), "enabled-with-legacy-shows-check-and-migration");
         Check(!CollectionGrantStatus.Text.Contains("授权输出"),"old-output-copy-grants-removed");
         Root.UpdateLayout();var body=ConnectionsPage.Children.OfType<ScrollViewer>().Single();var heading=ConnectionsPage.Children.OfType<TextBlock>().Single();var y=heading.TransformToVisual(Root).TransformPoint(new Windows.Foundation.Point()).Y;
         body.ChangeView(null,1000,null,true);await Task.Delay(80);Root.UpdateLayout();Check(heading.TransformToVisual(Root).TransformPoint(new Windows.Foundation.Point()).Y==y,"integration-heading-pinned-on-scroll");body.ChangeView(null,0,null,true);
         Check(HelpPage.Children.OfType<TextBlock>().Any()&&SettingsPage.Children.OfType<TextBlock>().Any(),"other-scroll-page-headings-outside-scroll");
-        await NavigateAsync("library");LibraryNav.ApplyTemplate();Root.UpdateLayout();var presenter=VisualTreeHelper.GetChild(LibraryNav,0) as ContentPresenter;var color=(presenter?.Background as SolidColorBrush)?.Color;
-        VisualStateManager.GoToState(LibraryNav,"PointerOver",true);Root.UpdateLayout();Check(presenter is not null&&(presenter.Background as SolidColorBrush)?.Color==color,"selected-nav-hover-stays-identical");
-        VisualStateManager.GoToState(LibraryNav,"Pressed",true);Root.UpdateLayout();Check((presenter!.Background as SolidColorBrush)?.Color==color,"selected-nav-press-stays-identical");VisualStateManager.GoToState(LibraryNav,"Normal",false);
+        await NavigateAsync("library");SettingsNav.ApplyTemplate();Root.UpdateLayout();var presenter=VisualTreeHelper.GetChild(SettingsNav,0) as ContentPresenter;var color=(presenter?.Background as SolidColorBrush)?.Color;
+        VisualStateManager.GoToState(SettingsNav,"PointerOver",true);Root.UpdateLayout();Check(presenter is not null&&(presenter.Background as SolidColorBrush)?.Color==color,"selected-nav-hover-stays-identical");
+        VisualStateManager.GoToState(SettingsNav,"Pressed",true);Root.UpdateLayout();Check((presenter!.Background as SolidColorBrush)?.Color==color,"selected-nav-press-stays-identical");VisualStateManager.GoToState(SettingsNav,"Normal",false);
         Check(AgentsNav.Style==(Style)Application.Current.Resources["NavButton"],"unselected-navigation-keeps-hover-style");
         var lightResources=Application.Current.Resources;
         Check((lightResources["ComboBoxDropDownBackground"] as SolidColorBrush)?.Color==(lightResources["MenuFlyoutPresenterBackground"] as SolidColorBrush)?.Color,"dropdowns-and-menus-share-paper");
@@ -119,7 +155,7 @@ public sealed partial class MainWindow
         File.Delete(source);var missing=await store.GetAsync(parsed.Id);Check(missing!.Preview==""&&missing.ExtractionStatus.Contains("缺失"),"missing-source-no-stale-text");
         Check(smokeDialogAnswers.Count==0&&smokeMessages.Count==0,"all-confirmations-observed");
         await RunBrowserRegressionAsync(Check);
-        return new{checks};
+        return new{checks,productNavigationChecks};
     }
     private async Task RunBrowserRegressionAsync(Action<bool,string> check)
     {

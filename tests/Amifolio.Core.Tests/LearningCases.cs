@@ -6,6 +6,28 @@ internal static class LearningCases
 {
     internal static (string,Func<Fixture,Task>)[] All=>
     [
+        ("project now learning picks a scoped active preference and a reviewable candidate without enabling sharing",async f=>
+        {
+            var s=Store(f);
+            var empty=await s.ReadPreferenceHighlightsAsync("p");
+            Check(empty.Active.Count==0&&empty.Candidate is null&&!s.HasState,"empty overview initialized a learning store");
+            await s.SetPolicyAsync("p",new(){Capture=true,Learn=true,BatchSize=1});
+            await s.CaptureAsync(Request(),Proof());
+            var job=(await s.ClaimAsync("p","chat",true))!;
+            var evidence=job.Evidence.Select(e=>e.Evidence.Id).ToArray();
+            await s.CompleteAsync(job.Id,job.Token,[new("style","verbosity","brief","偏好简洁回答","project","",evidence)],evidence.ToHashSet());
+            using(var db=CapacityDb(f))
+            {
+                CapacityEntry(db,"visible-active","active",DateTimeOffset.UtcNow,"保留的已启用偏好");
+                CapacityEntry(db,"unrelated-summary","active",DateTimeOffset.UtcNow,"非偏好概述",kind:"summary");
+            }
+            var project=await s.ReadPreferenceHighlightsAsync("p");
+            Check(project.Active.Single().Id=="visible-active"&&project.Candidate is{State:"candidate",Scope:"p"}&&!project.Shared,"highlight mixed evidence, state, or sharing");
+            var other=await s.ReadPreferenceHighlightsAsync("other");
+            Check(other.Active.Count==0&&other.Candidate is null,"project preference leaked to another scope");
+            await s.WithdrawEvidenceAsync(evidence[0]);
+            Check((await s.ReadPreferenceHighlightsAsync("p")).Candidate is null,"withdrawn evidence left a review shortcut");
+        }),
         ("learning new permissions default off and no legacy consent upgrade",async f=>
         {
             var p=await Store(f).PolicyAsync("p");Check(!p.Capture&&!p.Learn&&!p.Share&&!p.Remote&&!p.AutoActivate,"new consent enabled");

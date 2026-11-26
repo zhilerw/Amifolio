@@ -13,12 +13,17 @@ public sealed record CodexWorkSync(bool Enabled, string State);
 
 public partial class PortfolioStore
 {
+    internal const string WorkReferenceIndex = """
+        CREATE INDEX IF NOT EXISTS ix_codex_works_reference
+        ON codex_works(project, reference_id, recorded DESC, title, id);
+        """;
+
     private const string WorkSchema = """
         CREATE TABLE IF NOT EXISTS codex_work_sync(project TEXT PRIMARY KEY, enabled INTEGER NOT NULL, state TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS codex_works(id TEXT PRIMARY KEY, project TEXT NOT NULL, session TEXT NOT NULL,
             turn TEXT NOT NULL, kind TEXT NOT NULL, title TEXT NOT NULL, reference_id TEXT, recorded INTEGER NOT NULL);
         CREATE INDEX IF NOT EXISTS ix_codex_works_project ON codex_works(project,recorded);
-        """;
+        """ + WorkReferenceIndex;
 
     public Task<CodexWorkSync> WorkSyncAsync(string projectId, CancellationToken ct = default) =>
         DbAsync(db =>

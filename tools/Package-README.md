@@ -1,12 +1,12 @@
-# Amifolio 1.1.1 · Windows x64
+# Amifolio 1.1.2 · Windows x64
 
-这是 Windows 11 x64 预发行版。见 [1.1.1 更新记录](docs/releases/1.1.1.md)。
+这是 Windows 11 x64 预发行版。见 [1.1.2 更新记录](docs/releases/1.1.2.md)。
 
 在 Codex 插件设置添加随包提供的 [Amifolio 本地插件市场](codex/README.md)，安装插件并信任钩子。打开「作品」，选一个项目开启同步。Codex 完成新回合后，点击「更新作品」查看上传件和交付物。选中作品后可以打开原件、返回来源会话或设为范例。
 
 首屏显示「风格样张」。选择全局或项目，点样张的标题、背景、正文或按钮，在旁边调整选中的设置。点击「保存偏好」后，适用的 Codex 创作任务会使用同一份已启用偏好，即使 Amifolio 窗口已关闭。「查看下次提供内容」显示新会话首次执行相关创作任务时可收到的已保存偏好。风格预览需要 Microsoft Edge WebView2 Runtime。「更多」内可进入会话学习、提供日志和 Codex 原生记忆。原生记忆支持只读查看 v1、v2 文件、来源和最近变化。
 
-在「指令」可切换全局和项目 AGENTS.md，查看实际路径并在保存前核对差异。已发现的项目目录仍可从「设置」打开。旧资料在「设置 → 旧资料」只读保留。
+在「指令」可切换全局和项目 AGENTS.md，查看实际路径并在保存前核对差异。已发现的项目目录可从「设置 → 高级 → 项目文件」打开。旧资料在「设置 → 旧资料」只读保留。
 
 保留整个运行目录，双击 `desktop/Amifolio.exe` 启动，同时保留 `bridge`、`worker` 与 WinUI 资源。本机应用数据默认保存在 `%LOCALAPPDATA%\Amifolio`，与项目目录分开。关闭窗口结束本窗口工作，不安装常驻扫描服务；独立 MCP 连接由宿主管理。
 
@@ -26,7 +26,7 @@
 
 样张使用所选本机字体，未安装时启用系统回退。
 
-解压前将 `Get-FileHash -Algorithm SHA256 -LiteralPath .\Amifolio-1.1.1-win-x64.zip` 的结果与旁置 `.sha256.txt` 比对。ZIP 内的 `PACKAGE-MANIFEST.json` 记录全部有效载荷路径、字节数、逐文件 SHA-256 和本机原生测试摘要的 SHA-256。有效载荷逐项与原生测试前后核对的记录相符。解压时保留整个目录，包括 `desktop/Assets/StylePreview`、`bridge`、`worker` 和 `codex/marketplace` 内以点开头的清单路径。第三方许可见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+解压前将 `Get-FileHash -Algorithm SHA256 -LiteralPath .\Amifolio-1.1.2-win-x64.zip` 的结果与旁置 `.sha256.txt` 比对。ZIP 内的 `PACKAGE-MANIFEST.json` 记录全部有效载荷路径、字节数、逐文件 SHA-256 和本机原生测试摘要的 SHA-256。有效载荷逐项与原生测试前后核对的记录相符。解压时保留整个目录，包括 `desktop/Assets/StylePreview`、`bridge`、`worker` 和 `codex/marketplace` 内以点开头的清单路径。第三方许可见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
 
 旧版用户可按 [Codex 接入材料](codex/README.md) 停用独立 Amifolio MCP 与结束钩子，再启用 1.1 插件。
 

@@ -369,13 +369,6 @@ public sealed partial class MainWindow
         if (!closing) AgentsActionsButton.Focus(FocusState.Programmatic);
     }
 
-    private async void PrepareAgents(object sender, RoutedEventArgs e)
-    {
-        CloseAgentsActions();
-        await PrepareAgentsAsync();
-        if (!closing && agentsEdit.IsEditing) AgentsEditor.Focus(FocusState.Programmatic);
-    }
-
     private async Task PrepareAgentsAsync()
     {
         if (!agentsEdit.IsEditing || operation is not null || agentsConflict || !AgentsTargetMatchesPath) return;
@@ -389,12 +382,6 @@ public sealed partial class MainWindow
             var editingSnapshot = snapshot with { Content = agentsEdit.TextForSave(AgentsEditor.Text) };
             AgentsEditor.Text = agents.PreviewManagedBlock(editingSnapshot, context.LearningEntryDirectory(project), policy.Share);
         });
-    }
-
-    private void DeployAgentsFromPage(object sender, RoutedEventArgs e)
-    {
-        CloseAgentsActions();
-        DeployAgentsEntry(sender, e);
     }
 
     private void CloseAgentsActions() => AgentsActionsButton.Flyout.Hide();
@@ -605,7 +592,6 @@ public sealed partial class MainWindow
         AgentsConflictButton.Visibility = editing && agentsConflict ? Visibility.Visible : Visibility.Collapsed;
         AgentsConflictButton.IsEnabled = idle;
         AgentsActionsButton.IsEnabled = idle;
-        PrepareAgentsButton.IsEnabled = idle && editing && targetReady && !agentsConflict;
         UndoAgentsButton.IsEnabled = idle && !editing && targetReady && !agentsConflict && agentsUndo.HasBackup;
         UpdateAgentsStatus();
     }

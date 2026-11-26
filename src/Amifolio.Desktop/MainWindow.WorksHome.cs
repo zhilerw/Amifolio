@@ -36,11 +36,12 @@ public sealed partial class MainWindow
         AutomationProperties.SetHeadingLevel(heading, AutomationHeadingLevel.Level1);
         var refresh = new HyperlinkButton { Content = "更新作品", HorizontalAlignment = HorizontalAlignment.Right,
             VerticalAlignment = VerticalAlignment.Center };
-        refresh.Click += async (_, _) =>
+        refresh.Click += async (_, _) => await RunAsync("更新作品", async ct =>
         {
-            await RefreshCatalogInBackgroundAsync();
+            await SourceStore.RefreshCodexProjectsAsync(ct);
+            catalogVerified = true;
             await RefreshWorksHomeAsync();
-        };
+        });
         var header = new Grid { ColumnSpacing = 12 };
         header.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
@@ -86,13 +87,10 @@ public sealed partial class MainWindow
         ScrollViewer.SetVerticalScrollBarVisibility(worksHomeList, ScrollBarVisibility.Disabled);
         ScrollViewer.SetHorizontalScrollMode(worksHomeList, ScrollMode.Disabled);
         ScrollViewer.SetHorizontalScrollBarVisibility(worksHomeList, ScrollBarVisibility.Disabled);
-        var library = new HyperlinkButton { Content = "浏览项目文件" };
-        library.Click += async (_, _) => await RequestNavigationAsync("library");
-
         var content = new StackPanel { Spacing = 14, HorizontalAlignment = HorizontalAlignment.Left,
             Margin = new Thickness(24, 20, 24, 28) };
         foreach (var element in new UIElement[] { header, filters, worksHomeSyncPanel, worksHomeStatus,
-                     worksHomeConnection, worksHomeList, library })
+                     worksHomeConnection, worksHomeList })
             content.Children.Add(element);
         var scroll = new ScrollViewer
         {
@@ -116,9 +114,23 @@ public sealed partial class MainWindow
 
     private Task RefreshWorksHomeAsync() => LoadWorksHomeAsync(debounce: false);
 
-    private async Task LoadWorksHomeAsync(bool debounce)
+    private async Task<bool> OpenCreativeWorkAsync(string projectId, string? workId)
     {
-        if (closing) return;
+        if (closing || !SourceStore.CodexProjects.Any(project => project.Id == projectId)) return false;
+        var opened = false;
+        return await RequestNavigationAsync("works", () =>
+        {
+            worksHomeLoad?.Cancel();
+            ShowWorksHomeCards([]);
+            worksHomeList.Visibility = Visibility.Collapsed;
+            worksHomeSyncPanel.Visibility = Visibility.Collapsed;
+        }, async () => { opened = await LoadWorksHomeAsync(debounce: false, projectId, workId); }) && opened;
+    }
+
+    private async Task<bool> LoadWorksHomeAsync(bool debounce, string? requestedProjectId = null,
+        string? requestedWorkId = null)
+    {
+        if (closing) return false;
         worksHomeLoad?.Cancel();
         using var request = CancellationTokenSource.CreateLinkedTokenSource(backgroundTasks.Token);
         worksHomeLoad = request;
@@ -133,7 +145,9 @@ public sealed partial class MainWindow
                 .Where(group => group.Count() > 1).Select(group => group.Key).ToHashSet(StringComparer.CurrentCultureIgnoreCase);
             WorksHomeProject[] choices = [new(null, "所有项目"), .. projects.Select(p =>
                 new WorksHomeProject(p.Id, duplicateNames.Contains(p.Name) ? $"{p.Name} · {p.RootPath}" : p.Name))];
-            if (!worksHomeProjects.SequenceEqual(choices))
+            var requestedProject = requestedProjectId is null ? null : choices.FirstOrDefault(p => p.Id == requestedProjectId);
+            if (requestedProjectId is not null && requestedProject is null) return false;
+            if (!worksHomeProjects.SequenceEqual(choices) || requestedProject is not null)
             {
                 var previous = (worksHomeScope.SelectedItem as WorksHomeProject)?.Id;
                 worksHomeProjects = choices;
@@ -141,7 +155,12 @@ public sealed partial class MainWindow
                 try
                 {
                     worksHomeScope.ItemsSource = choices;
-                    worksHomeScope.SelectedItem = choices.FirstOrDefault(p => p.Id == previous) ?? choices[0];
+                    worksHomeScope.SelectedItem = requestedProject ?? choices.FirstOrDefault(p => p.Id == previous) ?? choices[0];
+                    if (requestedProject is not null)
+                    {
+                        worksHomeSearch.Text = "";
+                        ShowWorksHomeCards([]);
+                    }
                 }
                 finally { updatingWorksHome = false; }
             }
@@ -165,8 +184,16 @@ public sealed partial class MainWindow
                 new ParallelOptions { MaxDegreeOfParallelism = 4, CancellationToken = token }, async (project, ct) =>
                 recent.Add(await SourceStore.ListCodexWorkCardsAsync(project.Id, search, WorksHomeLimit + 1, ct)
                     .ConfigureAwait(false)));
+            var items = recent.SelectMany(list => list).OrderByDescending(card => card.Work.RecordedAt)
+                .ThenBy(card => card.Work.Title, StringComparer.Ordinal).ThenBy(card => card.Work.Id, StringComparer.Ordinal)
+                .Take(WorksHomeLimit + 1).ToArray();
+            CodexWorkCard? olderWork = null;
+            if (requestedWorkId is not null && projectId is not null &&
+                !items.Take(WorksHomeLimit).Any(card => card.Work.Id == requestedWorkId))
+                olderWork = await SourceStore.GetCodexWorkCardAsync(projectId, requestedWorkId, token);
             var sync = projectId is null ? null : await SourceStore.WorkSyncAsync(projectId, token);
             token.ThrowIfCancellationRequested();
+            if (requestedProject is not null && currentPage != "works") return false;
 
             if (sync is not null)
             {
@@ -184,14 +211,14 @@ public sealed partial class MainWindow
                 worksHomeSyncNote.Visibility = string.IsNullOrEmpty(worksHomeSyncNote.Text) ? Visibility.Collapsed : Visibility.Visible;
             }
 
-            var items = recent.SelectMany(list => list).OrderByDescending(card => card.Work.RecordedAt)
-                .ThenBy(card => card.Work.Title, StringComparer.Ordinal).ThenBy(card => card.Work.Id, StringComparer.Ordinal)
-                .Take(WorksHomeLimit + 1).ToArray();
-            ShowWorksHomeCards(items.Take(WorksHomeLimit)
-                .Select(card => new WorksHomeCardEntry(card, projectNames[card.Work.ProjectId])).ToArray());
-            worksHomeList.Visibility = items.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
+            IEnumerable<CodexWorkCard> shown = olderWork is null
+                ? items.Take(WorksHomeLimit)
+                : items.Take(WorksHomeLimit - 1).Prepend(olderWork);
+            ShowWorksHomeCards(shown.Select(card => new WorksHomeCardEntry(card, projectNames[card.Work.ProjectId])).ToArray());
+            worksHomeList.Visibility = items.Length > 0 || olderWork is not null ? Visibility.Visible : Visibility.Collapsed;
             SetWorksHomeStatus((projects.Length, items.Length) switch
             {
+                _ when olderWork is not null => "已打开指定作品，并显示此项目的近期作品。",
                 (0, _) => "还没有发现项目。在 Codex 打开一个本机项目后，再更新作品。",
                 (_, 0) when search.Length > 0 => "没有与此名称匹配的作品。",
                 (_, 0) when projectId is null => "还没有同步作品。选一个项目开启同步，上传件和交付物会在 Codex 完成新回合后出现在这里。",
@@ -200,16 +227,24 @@ public sealed partial class MainWindow
                 _ => ""
             });
             worksHomeConnection.Visibility = items.Length == 0 && search.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
+            if (requestedWorkId is null) return true;
+            var target = worksHomeList.Items.OfType<GridViewItem>().FirstOrDefault(
+                row => row.Tag is WorksHomeCardEntry entry && entry.Card.Work.Id == requestedWorkId);
+            if (target is null) return false;
+            worksHomeList.SelectedItem = target;
+            target.StartBringIntoView();
+            return true;
         }
-        catch (OperationCanceledException) when (token.IsCancellationRequested) { }
+        catch (OperationCanceledException) when (token.IsCancellationRequested) { return false; }
         catch (Exception ex)
         {
-            if (token.IsCancellationRequested) return;
+            if (token.IsCancellationRequested) return false;
             ShowWorksHomeCards([]);
             worksHomeList.Visibility = Visibility.Collapsed;
             worksHomeSyncNote.Text = "无法读取同步设置。";
             SetWorksHomeStatus("暂时无法读取作品，请点击更新作品重试。");
             System.Diagnostics.Trace.TraceWarning("Works home refresh failed: {0}", ex.GetType().Name);
+            return false;
         }
         finally
         {
@@ -302,7 +337,7 @@ public sealed partial class MainWindow
         });
         actions.Children.Add(preview);
         originalActions.Add(preview);
-        AddAction("用作范例", "打开范例设置", (artifact, ct) => EditCreativeAsync(work.ProjectId, artifact, ct));
+        AddAction("用作范例", "打开范例设置", (artifact, ct) => EditCreativeAsync(work.ProjectId, artifact, ct, work.Id));
         var source = new Button { Content = "打开来源会话", IsEnabled = Guid.TryParseExact(work.SessionId, "D", out _) };
         source.Click += async (_, _) => await RunAsync("打开来源会话", async ct =>
         {

@@ -11,9 +11,30 @@ internal static class CreativePreviewCases
         ("creative next delivery previews exact saved payload without claiming it", PreviewNextDelivery),
         ("creative preview can undo creation and recreation", UndoCreation),
         ("creative preview clears the last project override to inherit and can undo", ClearToInherit),
+        ("creative example unlink preserves authored values and can undo a reference-only profile", UnlinkReference),
         ("creative preview reads historical settings without fabricating undo", HistoricalSettings),
         ("creative preview validates new fields before advancing revision", Validate)
     ];
+
+    private static async Task UnlinkReference(Fixture fixture)
+    {
+        var store = new LearningStore(fixture.DataRoot);
+        var reference = "ref-" + new string('a', 64);
+        var favorite = new CreativeStyle("", "", "", "", reference, "山间来信", "留白")
+        { ReferenceWorkId = new string('b', 64) };
+        var referenceOnly = await store.SaveCreativeAsync("project-a", favorite, false, 0);
+        var authored = await store.SaveCreativeAsync("project-b", favorite with { Color = "#24766D" }, true, 0);
+        await ExpectRevisionConflict(() => store.RemoveCreativeReferenceAsync("project-a", referenceOnly.Revision - 1));
+        var cleared = await store.RemoveCreativeReferenceAsync("project-a", referenceOnly.Revision);
+        Check(await store.CreativeAsync("project-a") is null && await store.HasCreativeHistoryAsync("project-a"),
+            "unlinking a reference-only profile did not leave an undoable removal");
+        Check(await store.CreativeAsync("project-b") == authored, "unlink changed the other project");
+        var restored = await store.UndoCreativeRemovalAsync("project-a", cleared);
+        Check(restored.Style == favorite && restored.State == "disabled", "undo lost the prior state or association");
+        await store.RemoveCreativeReferenceAsync("project-b", authored.Revision);
+        Check(await store.CreativeAsync("project-b") is { Style.Color: "#24766D", Style.ReferenceId: null, Style.ReferenceWorkId: null, State: "active" },
+            "unlink deleted a saved color or paused the profile");
+    }
 
     private static async Task RoundTrip(Fixture fixture)
     {
@@ -148,12 +169,13 @@ internal static class CreativePreviewCases
         Check((await reopened.UndoCreativeRemovalAsync(project, empty.Revision)).Style == local.Style,
             "the project override could no longer be restored from the latest tombstone");
 
-        static async Task ExpectRevisionConflict(Func<Task> operation)
-        {
-            try { await operation(); }
-            catch (InvalidOperationException) { return; }
-            throw new InvalidOperationException("a stale creative revision was accepted");
-        }
+    }
+
+    private static async Task ExpectRevisionConflict(Func<Task> operation)
+    {
+        try { await operation(); }
+        catch (InvalidOperationException) { return; }
+        throw new InvalidOperationException("a stale creative revision was accepted");
     }
 
     private static async Task HistoricalSettings(Fixture fixture)

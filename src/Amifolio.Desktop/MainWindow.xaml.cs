@@ -194,11 +194,16 @@ public sealed partial class MainWindow : Window
         await RequestNavigationAsync(page);
     }
 
-    private async Task<bool> RequestNavigationAsync(string page)
+    private async Task<bool> RequestNavigationAsync(string page, Action? prepare = null, Func<Task>? load = null)
     {
         var mainLearning=page=="context";
         page=page=="context"?"learning":page;
-        if (page == currentPage) { if(mainLearning){learningReturnPage="context";SelectPage(page);} return true; }
+        if (page == currentPage)
+        {
+            if (load is not null) await NavigateAsync(page, prepare, load);
+            else if(mainLearning){learningReturnPage="context";SelectPage(page);}
+            return true;
+        }
         if(currentPage=="learning"&&!await CanLeaveLearningAsync())return false;
         if (currentPage == "context" && !await CanLeaveContextAsync()) return false;
         if (currentPage == "agents" && !await CanLeaveAgentsAsync()) return false;
@@ -207,21 +212,23 @@ public sealed partial class MainWindow : Window
         if(operation is not null)
         {
             var previous=currentPage;
-            try{await NavigateAsync(page);}
+            try{await NavigateAsync(page, prepare, load);}
             catch(Exception ex){SelectPage(previous);StatusText.Text="无法打开页面："+ex.Message;return false;}
         }
-        else await RunAsync("正在切换工作空间", async _ => await NavigateAsync(page));
+        else await RunAsync("正在切换工作空间", async _ => await NavigateAsync(page, prepare, load));
         return currentPage == page;
     }
 
-    private async Task NavigateAsync(string page)
+    private async Task NavigateAsync(string page, Action? prepare = null, Func<Task>? load = null)
     {
         if(page=="context"){learningReturnPage="context";page="learning";}
+        prepare?.Invoke();
         SelectPage(page);
         loadingPage = true;
         try
         {
-            switch (page)
+            if (load is not null) await load();
+            else switch (page)
             {
                 case "works": await RefreshWorksHomeAsync(); break;
                 case "creative": await LoadCreativePageAsync(); break;
@@ -255,8 +262,7 @@ public sealed partial class MainWindow : Window
             parent = parent switch
             {
                 "context" or "native-memory" => "creative",
-                "library" or "projects" => "works",
-                "tasks" or "connections" or "help" => "settings",
+                "library" or "projects" or "tasks" or "connections" or "help" => "settings",
                 _ => parent
             };
             var selected = pair.Key == parent;

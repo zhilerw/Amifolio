@@ -18,8 +18,40 @@ internal static class EnvironmentCases
         ("environment cancellation and overlong inputs are bounded", Bounds),
         ("environment linked setup paths are rejected without following", LinkedPaths),
         ("environment inaccessible config is isolated from other checks", InaccessibleConfig),
-        ("environment project entry and multiline argument configuration", ProjectEntry)
+        ("environment project entry and multiline argument configuration", ProjectEntry),
+        ("plugin connection reports local enablement and only actual legacy entries", PluginConnection)
     ];
+
+    private static async Task PluginConnection()
+    {
+        using var f = new EnvironmentFixture();
+        var empty = await f.Service.InspectPluginConnectionAsync();
+        Check(empty.PluginState == CodexPluginState.NotConfigured && empty.LegacyEntries.Count == 0 &&
+            !empty.LegacyInspectionIncomplete, "fresh setup has no plugin or legacy entries");
+
+        Directory.CreateDirectory(f.Service.CodexHome);
+        await File.WriteAllTextAsync(f.Service.ConfigPath,
+            "# [mcp_servers.amifolio]\n[plugins.\"amifolio@amifolio-local\"]\nenabled = true\n" +
+            "[mcp_servers.other]\ncommand = 'Amifolio mentioned in unrelated text'\n");
+        await File.WriteAllTextAsync(f.Service.HooksPath,
+            """{"hooks":{"Stop":[{"hooks":[{"type":"command","command":"unrelated","statusMessage":"Other hook"}]}]}}""");
+        var enabled = await f.Service.InspectPluginConnectionAsync();
+        Check(enabled.PluginState == CodexPluginState.Enabled && enabled.LegacyEntries.Count == 0,
+            "enabled plugin and unrelated config do not trigger migration");
+
+        await f.Setup();
+        await File.AppendAllTextAsync(f.Service.ConfigPath,
+            "\n[plugins.\"amifolio@amifolio-local\"]\nenabled = false\n", Encoding.Unicode);
+        await f.Service.InstallStopHookAsync(f.Bridge, f.Data);
+        var legacy = await f.Service.InspectPluginConnectionAsync(f.Agents);
+        Check(legacy.PluginState == CodexPluginState.Disabled && legacy.LegacyEntries.Count == 4 &&
+            !legacy.LegacyInspectionIncomplete, "MCP, standalone skill, Stop hook and selected AGENTS are detected");
+
+        await File.WriteAllTextAsync(f.Service.ConfigPath, "model = 'unclosed\n");
+        var damaged = await f.Service.InspectPluginConnectionAsync(f.Agents);
+        Check(damaged.PluginState == CodexPluginState.Unknown && damaged.LegacyEntries.Count == 3 &&
+            damaged.LegacyInspectionIncomplete, "broken config does not mask other migration findings");
+    }
 
     private static async Task Missing()
     {

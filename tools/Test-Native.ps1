@@ -3,8 +3,8 @@ param(
     [string]$PackageRoot = 'artifacts/Amifolio',
     [string]$ResultsRoot = '.local/native-tests',
     [ValidateRange(10, 300)][int]$TimeoutSeconds = 90,
-    [ValidateSet('empty','edit','motion','configuration','configuration-reopen','tasks','collection','automation','startup','startup-reopen','learning','settings','capacity','m3','m3-reopen','m4')]
-    [string[]]$Modes=@('empty','edit','motion','configuration','configuration-reopen','tasks','collection','automation','startup','startup-reopen','learning','settings','capacity','m3','m3-reopen','m4')
+    [ValidateSet('empty','edit','motion','configuration','configuration-reopen','tasks','collection','automation','startup','startup-reopen','learning','settings','capacity','m3','m3-reopen','m4','product')]
+    [string[]]$Modes=@('empty','edit','motion','configuration','configuration-reopen','tasks','collection','automation','startup','startup-reopen','learning','settings','capacity','m3','m3-reopen','m4','product')
 )
 $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path $PSScriptRoot -Parent

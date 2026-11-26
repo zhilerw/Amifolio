@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Amifolio.Core;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Automation.Peers;
 using Microsoft.UI.Xaml.Automation.Provider;
 using Microsoft.UI.Xaml.Controls;
@@ -70,22 +71,35 @@ public sealed partial class MainWindow
                 throw new InvalidOperationException("The startup artboard did not load.");
             await CaptureStylePreviewAsync(firstView, reportPath + ".first-artboard.png");
             await SourceStore.SetWorkSyncAsync(project.Id, true);
-            await SourceStore.RecordCodexWorksAsync(project, Guid.NewGuid().ToString("D"), "smoke-turn",
+            var workSession = Guid.NewGuid().ToString("D");
+            const string sessionTitle = "封面排版练习";
+            await SourceStore.RecordCodexWorksAsync(project, workSession, "smoke-turn",
                 [new CodexWorkSource("delivery", cover), new CodexWorkSource("upload", image)]);
+            await File.WriteAllLinesAsync(Path.Combine(integration.CodexHome, "session_index.jsonl"),
+                [JsonSerializer.Serialize(new { id = workSession, thread_name = sessionTitle, updated_at = DateTimeOffset.UtcNow })]);
             await CreativePreferences.SaveCreativeAsync(null, new("", "#4F7058", "", ""), true, 0);
             await CreativePreferences.SaveCreativeAsync(second.Id, new(SmokeMissingFont, "#54704D", "", ""), true, 0);
-            await NavigateAsync("works");
-            Check(worksHomeList.Items.Count == 2, "recent synced upload and delivery appear as work cards");
+            var documentId = (await SourceStore.ListCodexWorkCardsAsync(project.Id, "cover.md", 1, backgroundTasks.Token))
+                .Single().Work.Id;
+            var opened = await OpenCreativeWorkAsync(project.Id, documentId);
+            Check(opened && (worksHomeScope.SelectedItem as WorksHomeProject)?.Id == project.Id &&
+                worksHomeList.Items.Count == 2 && worksHomeList.SelectedItem is GridViewItem { Tag: WorksHomeCardEntry selected } &&
+                selected.Card.Work.Id == documentId, "creative shortcut opens scoped work cards and selects the requested work");
             var workRows = worksHomeList.Items.OfType<GridViewItem>().ToArray();
             var textRow = workRows.Single(row => ((WorksHomeCardEntry)row.Tag).Card.Work.Title == "cover.md");
             var imageRow = workRows.Single(row => ((WorksHomeCardEntry)row.Tag).Card.Work.Title == "cover.png");
+            var documentName = AutomationProperties.GetName(textRow);
+            var keepsSourceDetail = expandedWork?.Children.OfType<StackPanel>().LastOrDefault()?.Children.OfType<TextBlock>()
+                .Any(text => text.Text.Contains(workSession, StringComparison.Ordinal)) == true;
             var imageFrame = (Border)((StackPanel)imageRow.Content).Children[0];
             await WaitAsync(() => imageFrame.Child is Image);
             Check(imageFrame.Child is Image, "scoped image work decodes a cover before selection");
             worksHomeList.SelectedItem = textRow;
             var document = ((WorksHomeCardEntry)textRow.Tag).Card;
-            Check(expandedWork is not null && document is { Excerpt.Length: 0, Work.Availability: "未解析" },
-                "freshly synced text has no excerpt when selected");
+            Check(expandedWork is not null && document is { Excerpt.Length: 0, Work.Availability: "未解析" } &&
+                documentName.Contains(sessionTitle, StringComparison.Ordinal) &&
+                !documentName.Contains(workSession, StringComparison.Ordinal) && keepsSourceDetail,
+                "freshly synced work shows the session title on the card and keeps its UUID in details");
             Root.UpdateLayout();
             var previewButton = SmokeVisuals(expandedWork!).OfType<Button>().Single(button => Equals(button.Content, "预览"));
             smokeMessages.Enqueue(document.Work.Title);
