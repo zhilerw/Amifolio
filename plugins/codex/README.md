@@ -4,7 +4,7 @@ Amifolio discovers real local Codex projects and references files in their origi
 
 ## Install the Amifolio plugin
 
-The Amifolio 1.1.0 Windows candidate includes the 1.1.0 Codex plugin with its manifest, hooks, skill and local MCP server. Add the bundled marketplace, then install Amifolio under Codex Plugins. From the CLI, the equivalent steps are:
+The Amifolio 1.1.1 Windows candidate includes the 1.1.1 Codex plugin with its manifest, hooks, skill and local MCP server. Add the bundled marketplace, then install Amifolio under Codex Plugins. From the CLI, the equivalent steps are:
 
 ~~~powershell
 codex plugin marketplace add 'E:\path\Amifolio\codex\marketplace'

@@ -64,8 +64,8 @@ public sealed partial class MainWindow
     {
         using(StartupTiming.Measure("startup.layout"))Root.UpdateLayout();
         var controlsReady=LibraryNav.IsEnabled&&ContextNav.IsEnabled&&AgentsNav.IsEnabled&&SettingsNav.IsEnabled;
-        if(closing||!startupPreparation.IsCompletedSuccessfully||storeSession is null||!ready||operation is not null||!controlsReady||!browserInputAttached||WorksHomePage.Visibility!=Visibility.Visible||WorksHomePage.ActualWidth<=0||WorksHomePage.ActualHeight<=0)
-            throw new InvalidOperationException("Initial works page is not ready for interaction.");
+        if(closing||!startupPreparation.IsCompletedSuccessfully||storeSession is null||!ready||operation is not null||!controlsReady||!browserInputAttached||CreativePage.Visibility!=Visibility.Visible||CreativePage.ActualWidth<=0||CreativePage.ActualHeight<=0)
+            throw new InvalidOperationException("Initial creative page is not ready for interaction.");
         var cached=ShowingBrowserCache;var count=ArtifactList.Items.Count;
         var heartbeat=new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         using(StartupTiming.Measure("startup.dispatcher-heartbeat"))
@@ -74,7 +74,17 @@ public sealed partial class MainWindow
             await heartbeat.Task.WaitAsync(TimeSpan.FromSeconds(5),backgroundTasks.Token);
         }
         backgroundTasks.Token.ThrowIfCancellationRequested();
-        startupReadyEvidence=new{controlsEnabled=controlsReady,browserInputAttached,cachedView=cached,displayedItems=count,dispatcherResponsive=true,libraryWidth=WorksHomePage.ActualWidth,libraryHeight=WorksHomePage.ActualHeight,windowWidth=AppWindow.Size.Width,windowHeight=AppWindow.Size.Height,requestedWindowWidth=startupWindowSize.Width,requestedWindowHeight=startupWindowSize.Height,windowResizeRequests=startupResizeRequests};
+        startupReadyEvidence = new
+        {
+            controlsEnabled = controlsReady, browserInputAttached, cachedView = cached, displayedItems = count,
+            dispatcherResponsive = true, libraryWidth = CreativePage.ActualWidth, libraryHeight = CreativePage.ActualHeight,
+            initialPage = currentPage,
+            creativePreviewAtWindowReady = stylePreviewReady && creativeLoaded ? "interactive" :
+                stylePreviewUnavailable ? "unavailable" : "loading",
+            windowWidth = AppWindow.Size.Width, windowHeight = AppWindow.Size.Height,
+            requestedWindowWidth = startupWindowSize.Width, requestedWindowHeight = startupWindowSize.Height,
+            windowResizeRequests = startupResizeRequests
+        };
         StartupTiming.Mark("startup.ready");
     }
 

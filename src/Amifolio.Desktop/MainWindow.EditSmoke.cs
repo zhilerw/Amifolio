@@ -123,7 +123,7 @@ public sealed partial class MainWindow
         CheckRecovery(await File.ReadAllTextAsync(target) == external && !UndoAgentsButton.IsEnabled,
             "undo restores the reviewed disk baseline");
 
-        Check(smokeDialogs.All(x => x.Background == "#FFFCFAF5"), "all native confirmation dialogs use cream background");
+        Check(smokeDialogs.All(x => x.Background == "#FFFAF9F5"), "all native confirmation dialogs use the shared paper background");
         return new { checks, normalization, agentsRecoveryChecks };
     }
 }

@@ -104,12 +104,12 @@ public sealed partial class MainWindow
         VisualStateManager.GoToState(LibraryNav,"Pressed",true);Root.UpdateLayout();Check((presenter!.Background as SolidColorBrush)?.Color==color,"selected-nav-press-stays-identical");VisualStateManager.GoToState(LibraryNav,"Normal",false);
         Check(AgentsNav.Style==(Style)Application.Current.Resources["NavButton"],"unselected-navigation-keeps-hover-style");
         var lightResources=Application.Current.Resources;
-        Check((lightResources["ComboBoxDropDownBackground"] as SolidColorBrush)?.Color==(lightResources["MenuFlyoutPresenterBackground"] as SolidColorBrush)?.Color,"dropdowns-and-menus-share-cream");
+        Check((lightResources["ComboBoxDropDownBackground"] as SolidColorBrush)?.Color==(lightResources["MenuFlyoutPresenterBackground"] as SolidColorBrush)?.Color,"dropdowns-and-menus-share-paper");
         Check((CornerRadius)Application.Current.Resources["OverlayCornerRadius"]==new CornerRadius(5),"popup-corners-unified");
         KindFilter.IsDropDownOpen=true;await Task.Delay(160);Root.UpdateLayout();
         var popup=VisualTreeHelper.GetOpenPopupsForXamlRoot(Root.XamlRoot).Single(x=>x.IsOpen);
         var popupParts=SmokeVisuals(popup.Child).OfType<Border>().ToArray();
-        Check(popupParts.Any(x=>(x.Background as SolidColorBrush)?.Color==Windows.UI.Color.FromArgb(255,246,241,230)),"actual-dropdown-cream-background");
+        Check(popupParts.Any(x=>(x.Background as SolidColorBrush)?.Color==Windows.UI.Color.FromArgb(255,236,236,228)),"actual-dropdown-paper-background");
         Check(popupParts.Any(x=>x.CornerRadius.TopLeft==5&&x.CornerRadius.BottomRight==5),"actual-dropdown-small-corners");
         await RenderSnapshotAsync(Option("--smoke-report")+".dropdown.png",(FrameworkElement)popup.Child);KindFilter.IsDropDownOpen=false;
         var unchangedTime=File.GetLastWriteTimeUtc(source);await File.WriteAllTextAsync(source,before.Replace("needle","NEEDLE"));File.SetLastWriteTimeUtc(source,unchangedTime);await RefreshLibraryAsync();

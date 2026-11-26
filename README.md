@@ -2,7 +2,7 @@
 
 基于 C# + WinUI 3 的 Windows 桌面应用，配有 Codex 插件，可查看上传件和交付物、编辑创作偏好、管理作品范例与本机指令。
 
-当前版本为 **1.1.0 预发行版**。Windows 11 x64 运行包和源码包见 [GitHub Releases](https://github.com/zhilerw/Amifolio/releases)。安装、升级和回退见[运行说明](docs/RELEASE.md)。
+当前版本为 **1.1.1 预发行版**。Windows 11 x64 运行包和源码包见 [GitHub Releases](https://github.com/zhilerw/Amifolio/releases)。安装、升级和回退见[运行说明](docs/RELEASE.md)。
 
 ## Amifilo可以做什么
 
@@ -11,13 +11,12 @@
 - 在「指令」中查看与编辑全局或项目 AGENTS.md，保存前核对差异，并可撤销受管变更。
 - 手动浏览、扫描和解析已发现的项目目录。从「设置」可进入项目文件浏览、扫描和手动解析。文本 PDF、现代 Office、文本和代码支持有界提取与来源定位。
 
-## 1.1.0 更新
+## 1.1.1 更新
 
-- 新增 Codex 本地插件市场，可安装 Amifolio 插件、启用 MCP，并在 Codex 内审核和信任结束钩子。
-- 「作品」聚合已识别的 Codex 上传件和交付物，可跳转到来源或设为范例。首屏风格样张用于编辑全局和项目偏好。
-- 「指令」支持查看、编辑、核对差异与撤销 AGENTS.md 变更。提供只读的 Codex 原生记忆浏览入口。
+- 重做风格样张的视觉和编辑体验。可以直接选中页面上的元素，调节字体、颜色及间距，预览与已保存的创作偏好相连。
+- 作品卡优先展示缩略图或内容预览，并保留打开原件与核对来源的入口。
 
-更新记录 [1.1.0](docs/releases/1.1.0.md)。
+更新记录 [1.1.0](docs/releases/1.1.0.md) · [1.1.1](docs/releases/1.1.1.md)。
 
 ## 安装与构建
 

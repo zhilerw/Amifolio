@@ -1,7 +1,10 @@
 using System.Text.Json;
 using Amifolio.Core;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Automation.Peers;
+using Microsoft.UI.Xaml.Automation.Provider;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media;
 using Microsoft.Web.WebView2.Core;
 using Windows.Graphics;
 using Windows.Storage.Streams;
@@ -11,7 +14,7 @@ namespace Amifolio.Desktop;
 public sealed partial class MainWindow
 {
     private const string SmokeFont = "Segoe UI";
-    private const string SmokeColor = "#3D719C";
+    private const string SmokeColor = "#20685F";
     private const string SmokeSample = "给今天的风留一点空白。\n桌面与 Codex 共用这段样文。";
     private const string SmokeMissingFont = "Amifolio Smoke Uninstalled Font";
 
@@ -34,12 +37,15 @@ public sealed partial class MainWindow
         var studio = Path.Combine(fixture, "studio");
         var other = Path.Combine(fixture, "other");
         var cover = Path.Combine(studio, "cover.md");
+        var image = Path.Combine(studio, "cover.png");
         Directory.CreateDirectory(studio);
         Directory.CreateDirectory(other);
         Directory.CreateDirectory(integration.CodexHome);
         if (!reopen)
         {
-            await File.WriteAllTextAsync(cover, "# 交付物\n这是 M3 的隔离测试作品。");
+            await File.WriteAllTextAsync(cover, "# 交付物\n这是风格样张的隔离测试作品。");
+            await File.WriteAllBytesAsync(image, Convert.FromBase64String(
+                "iVBORw0KGgoAAAANSUhEUgAAABAAAAAICAIAAAB/FOjAAAAAGElEQVR4nGOQLowmiLZdWQhHDKMaaKEBAIn0nAHZYGEmAAAAAElFTkSuQmCC"));
             await File.WriteAllTextAsync(Path.Combine(integration.CodexHome, ".codex-global-state.json"),
                 JsonSerializer.Serialize(new Dictionary<string, object>
                 {
@@ -56,19 +62,60 @@ public sealed partial class MainWindow
         var project = SourceStore.CodexProjects.Single(item => item.RootPath == studio);
         var second = SourceStore.CodexProjects.Single(item => item.RootPath == other);
 
-        Check(currentPage == "works", "works is the default page");
+        Check(currentPage == "creative" && CreativePage.Visibility == Visibility.Visible, "style sample is the first page");
         if (!reopen)
         {
+            await WaitAsync(() => stylePreviewReady);
+            if (stylePreview?.CoreWebView2 is not { } firstView || !stylePreviewReady)
+                throw new InvalidOperationException("The startup artboard did not load.");
+            await CaptureStylePreviewAsync(firstView, reportPath + ".first-artboard.png");
             await SourceStore.SetWorkSyncAsync(project.Id, true);
             await SourceStore.RecordCodexWorksAsync(project, Guid.NewGuid().ToString("D"), "smoke-turn",
-                [new CodexWorkSource("delivery", cover)]);
-            await CreativePreferences.SaveCreativeAsync(null, new("", "#6B5A80", "", ""), true, 0);
-            await CreativePreferences.SaveCreativeAsync(second.Id, new(SmokeMissingFont, "#A24639", "", ""), true, 0);
-            await RefreshWorksHomeAsync();
-            Check(worksHomeList.Items.Count == 1, "recent synced work appears on initial page");
-            worksHomeList.SelectedIndex = 0;
-            Check(expandedWork is not null, "selected work expands inline");
+                [new CodexWorkSource("delivery", cover), new CodexWorkSource("upload", image)]);
+            await CreativePreferences.SaveCreativeAsync(null, new("", "#4F7058", "", ""), true, 0);
+            await CreativePreferences.SaveCreativeAsync(second.Id, new(SmokeMissingFont, "#54704D", "", ""), true, 0);
+            await NavigateAsync("works");
+            Check(worksHomeList.Items.Count == 2, "recent synced upload and delivery appear as work cards");
+            var workRows = worksHomeList.Items.OfType<GridViewItem>().ToArray();
+            var textRow = workRows.Single(row => ((WorksHomeCardEntry)row.Tag).Card.Work.Title == "cover.md");
+            var imageRow = workRows.Single(row => ((WorksHomeCardEntry)row.Tag).Card.Work.Title == "cover.png");
+            var imageFrame = (Border)((StackPanel)imageRow.Content).Children[0];
+            await WaitAsync(() => imageFrame.Child is Image);
+            Check(imageFrame.Child is Image, "scoped image work decodes a cover before selection");
+            worksHomeList.SelectedItem = textRow;
+            var document = ((WorksHomeCardEntry)textRow.Tag).Card;
+            Check(expandedWork is not null && document is { Excerpt.Length: 0, Work.Availability: "未解析" },
+                "freshly synced text has no excerpt when selected");
             Root.UpdateLayout();
+            var previewButton = SmokeVisuals(expandedWork!).OfType<Button>().Single(button => Equals(button.Content, "预览"));
+            smokeMessages.Enqueue(document.Work.Title);
+            ((IInvokeProvider)new ButtonAutomationPeer(previewButton).GetPattern(PatternInterface.Invoke)).Invoke();
+            var previewContainsText = false;
+            using (var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(12)))
+            {
+                while (!deadline.IsCancellationRequested)
+                {
+                    var previewDialog = VisualTreeHelper.GetOpenPopupsForXamlRoot(Root.XamlRoot)
+                        .Where(popup => popup.IsOpen && popup.Child is not null)
+                        .SelectMany(popup => SmokeVisuals(popup.Child)).OfType<ContentDialog>()
+                        .FirstOrDefault(dialog => Equals(dialog.Title, document.Work.Title));
+                    if (previewDialog?.Content is ScrollViewer { Content: StackPanel previewPanel })
+                    {
+                        previewContainsText = previewPanel.Children.OfType<TextBlock>().Any(text => text.Text.Contains("隔离测试作品"));
+                        break;
+                    }
+                    if (operation is null && smokeMessages.Count == 0) break;
+                    await Task.Delay(10);
+                }
+            }
+            await WaitAsync(() => operation is null);
+            Root.UpdateLayout();
+            Check(previewContainsText && operation is null && StatusText.Text == "就绪" &&
+                smokeMessages.Count == 0 && worksHomeList.Items.Count == 2 &&
+                worksHomeList.SelectedItem is GridViewItem { Tag: WorksHomeCardEntry updated } updatedRow &&
+                updated.Card.Work.Id == document.Work.Id &&
+                SmokeVisuals(updatedRow).OfType<TextBlock>().Any(text => text.Text.Contains("隔离测试作品")),
+                "works Preview extracts the fresh document, displays its text and refreshes the selected cover");
             var worksScroll = WorksHomePage.Children.OfType<ScrollViewer>().Single();
             var workBody = (FrameworkElement)worksScroll.Content;
             var workOrigin = workBody.TransformToVisual(WorksHomePage).TransformPoint(new Windows.Foundation.Point());
@@ -97,7 +144,7 @@ public sealed partial class MainWindow
         if (!reopen)
         {
             Check(installedPreviewFonts.Contains(SmokeFont, StringComparer.OrdinalIgnoreCase), "system font enumerated");
-            Check(await ReadCssAsync(".action-trigger", "backgroundColor") == "rgb(107, 90, 128)",
+            Check(await ReadCssAsync(".action-trigger", "backgroundColor") == "rgb(79, 112, 88)",
                 "project with no local color previews the active global default");
             await core.ExecuteScriptAsync("""
                 (() => {
@@ -109,32 +156,37 @@ public sealed partial class MainWindow
                     document.querySelector('.title-trigger').click();
                     update('#font', 'Segoe UI', 'change');
                     document.querySelector('.action-trigger').click();
-                    update('#color-hex', '#3D719C');
+                    update('#color-hex', '#20685F');
                     update('#radius', '22');
                     document.querySelector('.body-trigger').click();
                     update('#sample-text', "给今天的风留一点空白。\n桌面与 Codex 共用这段样文。");
                     document.querySelector('[data-editor="background-editor"]').click();
-                    update('#background-hex', '#FFF2E5');
+                    update('#background-hex', '#F2F4EB');
                     document.querySelector('.work-card').click();
                     update('#spacing', '31');
-                    document.querySelector('.work-card').click();
+                    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
                 })()
                 """);
             await WaitAsync(() => CreativeSave.IsEnabled && creativeDraft?.SampleText == SmokeSample);
-            Check(CreativeSave.IsEnabled && creativeDraft is { Font: SmokeFont, Color: SmokeColor, Background: "#FFF2E5", Radius: 22, Spacing: 31, SampleText: SmokeSample },
+            Check(CreativeSave.IsEnabled && creativeDraft is { Font: SmokeFont, Color: SmokeColor, Background: "#F2F4EB", Radius: 22, Spacing: 31, SampleText: SmokeSample },
                 "element edits arrive as a native draft");
             Check((await ReadCssAsync(".title-trigger", "fontFamily")).Contains(SmokeFont, StringComparison.OrdinalIgnoreCase) &&
-                await ReadCssAsync(".action-trigger", "backgroundColor") == "rgb(61, 113, 156)",
+                await ReadCssAsync(".action-trigger", "backgroundColor") == "rgb(32, 104, 95)",
                 "font and color update before saving");
             SaveCreativePage(CreativeSave, new RoutedEventArgs());
             await WaitAsync(() => !creativeBusy && loadedCreative?.Style.SampleText == SmokeSample);
-            Check(loadedCreative is { State: "active", Style.Color: SmokeColor } && !CreativeHasDraft, "native save commits active scoped preference");
+            Check(loadedCreative is { State: "active", Style.Color: SmokeColor } && !CreativeHasDraft && CreativeDelivery.IsEnabled,
+                "native save commits active scoped preference and enables exact-delivery preview");
+            smokeMessages.Enqueue("下次提供内容");
+            ShowNextCreativeDelivery(CreativeDelivery, new RoutedEventArgs());
+            await WaitAsync(() => operation is null && !creativeBusy);
+            if (smokeMessages.Count != 0) throw new InvalidOperationException("Next creative delivery dialog did not open.");
         }
         else
         {
             Check(loadedCreative is { State: "active", Style.Font: SmokeFont, Style.Color: SmokeColor, Style.SampleText: SmokeSample, Style.Spacing: 31 },
                 "fresh process reads the same preference");
-            Check(await ReadCssAsync(".action-trigger", "backgroundColor") == "rgb(61, 113, 156)", "fresh process previews persisted color");
+            Check(await ReadCssAsync(".action-trigger", "backgroundColor") == "rgb(32, 104, 95)", "fresh process previews persisted color");
             ToggleCreative(CreativeToggle, new RoutedEventArgs());
             await WaitAsync(() => !creativeBusy && loadedCreative?.State == "disabled");
             Check(loadedCreative?.State == "disabled", "pause available from project toolbar");

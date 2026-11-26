@@ -4,6 +4,9 @@ const bridge = window.chrome?.webview;
 const byId = id => document.getElementById(id);
 const canvas = byId("canvas");
 const triggers = [...document.querySelectorAll("[data-editor]")];
+const picks = [...document.querySelectorAll("[data-pick]")];
+const titleTrigger = document.querySelector(".title-trigger");
+const backgroundTrigger = document.querySelector(".background-trigger");
 const controls = new Map([...document.querySelectorAll("[data-field]")]
   .map(control => [control.dataset.field, control]));
 const defaultStyle = Object.freeze({
@@ -16,11 +19,11 @@ const defaultStyle = Object.freeze({
   radius: null,
   sampleText: null
 });
-const titleFonts = '"华文宋体", "STSong", "SimSun", serif';
+const titleFonts = 'Georgia, "华文宋体", "STSong", "SimSun", serif';
 const theme = Object.freeze({
   ...defaultStyle,
-  color: "#24766D",
-  background: "#FCFAF5",
+  color: "#174D43",
+  background: "#24766D",
   spacing: 24,
   radius: 16,
   sampleText: byId("sample").textContent,
@@ -37,6 +40,7 @@ let draft = { ...defaultStyle };
 let globalDefaults = defaultStyle;
 let epoch = null;
 let activeTrigger = null;
+let editorOrigin = null;
 let installedFonts = new Map();
 
 function textField(value, limit, { multiline = false } = {}) {
@@ -118,7 +122,7 @@ function renderFontOptions() {
   const inherited = globalDefaults.font;
   const defaultLabel = inherited
     ? "继承全局 · " + inherited + (installedFonts.has(fontKey(inherited)) ? "" : "（未安装）")
-    : "主题默认（华文宋体）";
+    : "主题默认（Georgia · 宋体）";
   const options = [new Option(defaultLabel, "")];
   const installed = installedFonts.get(fontKey(draft.font));
   if (draft.font && !installed) {
@@ -153,13 +157,12 @@ function useDarkInk(hex) {
 function renderCanvas() {
   const accent = effectiveValue("color");
   const background = effectiveValue("background");
-  const canvasInk = background === theme.background ? "#303A35" : useDarkInk(background) ? "#000" : "#fff";
   const family = installedFonts.get(fontKey(effectiveValue("font")));
   const quotedFamily = family ? '"' + family.replace(/["\\]/g, "\\$&") + '", ' : "";
   canvas.style.setProperty("--accent", accent);
   canvas.style.setProperty("--on-accent", useDarkInk(accent) ? "#000" : "#fff");
   canvas.style.setProperty("--canvas-paper", background);
-  canvas.style.setProperty("--canvas-ink", canvasInk);
+  canvas.style.setProperty("--canvas-ink", useDarkInk(background) ? "#000" : "#fff");
   canvas.style.setProperty("--spacing", effectiveValue("spacing") + "px");
   canvas.style.setProperty("--radius", effectiveValue("radius") + "px");
   canvas.style.setProperty("--heading-font", quotedFamily + titleFonts);
@@ -224,31 +227,39 @@ function updateDraft(field, value) {
   if (bridge && epoch !== null) bridge.postMessage(draftSnapshot());
 }
 
-function changeEditor(next, moveFocus = false) {
-  if (activeTrigger) {
+function changeEditor(next, origin = null) {
+  if (activeTrigger && activeTrigger !== next) {
     byId(activeTrigger.dataset.editor).hidden = true;
     activeTrigger.setAttribute("aria-expanded", "false");
   }
   activeTrigger = next;
+  editorOrigin = origin;
+  const editorId = next?.dataset.editor;
+  for (const pick of picks) {
+    pick.setAttribute("aria-pressed", String(pick.dataset.pick === editorId));
+  }
   if (next) {
-    const panel = byId(next.dataset.editor);
+    const panel = byId(editorId);
     panel.hidden = false;
     next.setAttribute("aria-expanded", "true");
-    if (moveFocus) panel.querySelector("input, select, textarea").focus();
+    if (origin) panel.querySelector("input, select, textarea").focus();
   }
 }
 
 for (const trigger of triggers) {
-  trigger.addEventListener("click", () => changeEditor(activeTrigger === trigger ? null : trigger, true));
+  trigger.addEventListener("click", () => changeEditor(trigger, trigger));
+}
+for (const pick of picks) {
+  const trigger = triggers.find(button => button.dataset.editor === pick.dataset.pick);
+  pick.addEventListener("click", () => changeEditor(trigger, pick));
 }
 canvas.addEventListener("click", event => {
   if (event.target !== canvas) return;
-  const trigger = triggers.find(button => button.dataset.editor === "background-editor");
-  if (!trigger.disabled) trigger.click();
+  if (!backgroundTrigger.disabled) backgroundTrigger.click();
 });
 document.addEventListener("keydown", event => {
-  if (event.key !== "Escape" || event.defaultPrevented || !activeTrigger) return;
-  const previous = activeTrigger;
+  if (event.key !== "Escape" || event.defaultPrevented || event.isComposing || !activeTrigger) return;
+  const previous = editorOrigin ?? activeTrigger;
   changeEditor(null);
   previous.focus();
   event.preventDefault();
@@ -308,6 +319,15 @@ for (const field of colorFields) {
   });
 }
 
+for (const preset of document.querySelectorAll("[data-background-preset]")) {
+  const color = preset.dataset.backgroundPreset;
+  preset.style.setProperty("--preset-swatch", color);
+  preset.addEventListener("click", () => {
+    updateDraft("background", color);
+    renderColorControl("background");
+  });
+}
+
 for (const field of rangeFields) {
   const control = controls.get(field);
   control.addEventListener("input", () => {
@@ -326,15 +346,24 @@ function loadState(message) {
   draft = readStyle(message.style);
   globalDefaults = readStyle(message.defaults);
   installedFonts = readFonts(message.fonts);
-  changeEditor(null);
+  const scopeName = typeof message.scopeName === "string" ? message.scopeName.trim() : "";
+  byId("scope-name").textContent = scopeName || "风格示例";
+  const focusedPanel = activeTrigger && byId(activeTrigger.dataset.editor);
+  const returnFocus = document.hasFocus() && focusedPanel?.contains(document.activeElement) && activeTrigger !== titleTrigger
+    ? editorOrigin ?? activeTrigger
+    : null;
   renderState();
-  for (const trigger of triggers) trigger.disabled = false;
+  for (const button of [...triggers, ...picks]) button.disabled = false;
+  changeEditor(titleTrigger);
+  returnFocus?.focus();
 }
 
 if (bridge) {
   bridge.addEventListener("message", event => {
     const message = event.data;
-    if (message?.type === "state" && Number.isSafeInteger(message.epoch)) loadState(message);
+    if (message?.type !== "state" || !Number.isSafeInteger(message.epoch)) return;
+    loadState(message);
+    if (message.acknowledge === true) bridge.postMessage({ type: "state-applied", epoch });
   });
   bridge.postMessage({ type: "ready" });
 } else {

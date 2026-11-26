@@ -424,6 +424,7 @@ tests = tests.Concat(Stage6RecoveryCases.All).ToArray();
 tests = tests.Concat(BrowserIndexCases.All).ToArray();
 tests = tests.Concat(LearningCases.All).ToArray();
 tests = tests.Concat(CreativePreviewCases.All).ToArray();
+tests = tests.Concat(WorkCardCases.All).ToArray();
 tests = tests.Concat(MemoryPolicyCases.All).ToArray();
 tests = tests.Concat(CodexTurnCases.All).ToArray();
 tests = tests.Concat(LearningRecoveryCases.All).ToArray();

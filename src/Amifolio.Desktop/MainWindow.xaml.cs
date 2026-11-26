@@ -30,7 +30,7 @@ public sealed partial class MainWindow : Window
     private CancellationTokenSource? operation;
     private CancellationTokenSource? searchDelay;
     private readonly CancellationTokenSource backgroundTasks=new();
-    private string currentPage = "works";
+    private string currentPage = "creative";
     private string? selectedArtifactId;
     private readonly int? cornerPreferenceResult;
     private SizeInt32 startupWindowSize;
@@ -93,7 +93,7 @@ public sealed partial class MainWindow : Window
         using(StartupTiming.Measure("main.learning"))InitializeLearningPage();
         InitializeWorksHome();
         Root.SizeChanged += (_, e) => SetNavigationDensity(e.NewSize.Width < 520);
-        SelectPage("works");
+        SelectPage("creative");
         StartupTiming.Mark("main.ctor.end");
         Closed += (_, _) => { closing = true; CloseStylePreview(); DisposeBrowser(); StopAutomaticProcessing(); noticeTimer.Stop(); motion.Dispose(); operation?.Cancel(); backgroundTasks.Cancel(); searchDelay?.Cancel(); ModelKey.Password = ""; storeSession?.Dispose(); };
     }
@@ -153,7 +153,7 @@ public sealed partial class MainWindow : Window
         }
         StartupTiming.Mark("startup.window-sizing.end");
         StartupTiming.Mark("startup.operation.begin");
-        await RunAsync("正在打开本机作品库", async token =>
+        await RunAsync("正在打开风格样张", async token =>
         {
             using(StartupTiming.Measure("startup.preparation-wait"))await startupPreparation.WaitAsync(token);
             using(StartupTiming.Measure("startup.model"))await LoadModelConfigurationAsync(token);
@@ -165,7 +165,7 @@ public sealed partial class MainWindow : Window
             updating = false;
             StartupTiming.Mark("startup.filters.end");
             using(StartupTiming.Measure("startup.library"))await RefreshLibraryAsync();
-            using (StartupTiming.Measure("startup.works")) await RefreshWorksHomeAsync();
+            using (StartupTiming.Measure("startup.creative")) await LoadCreativePageAsync();
             ready = true;
             StatusText.Text = "就绪";
         });

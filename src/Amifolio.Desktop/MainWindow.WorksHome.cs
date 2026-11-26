@@ -5,7 +5,6 @@ using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Automation.Peers;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
-using Microsoft.UI.Xaml.Media.Imaging;
 using Windows.Storage;
 using Windows.System;
 
@@ -16,7 +15,7 @@ public sealed partial class MainWindow
     private const int WorksHomeLimit = 60;
     private ComboBox worksHomeScope = null!;
     private TextBox worksHomeSearch = null!;
-    private ListView worksHomeList = null!;
+    private GridView worksHomeList = null!;
     private StackPanel worksHomeSyncPanel = null!;
     private ToggleSwitch worksHomeSync = null!;
     private TextBlock worksHomeSyncNote = null!;
@@ -27,6 +26,7 @@ public sealed partial class MainWindow
     private bool updatingWorksHome;
     private bool savingWorksHomeSync;
     private StackPanel? expandedWork;
+    private GridViewItem? expandedWorkRow;
 
     private sealed record WorksHomeProject(string? Id, string Name);
 
@@ -79,10 +79,13 @@ public sealed partial class MainWindow
         AutomationProperties.SetLiveSetting(worksHomeStatus, AutomationLiveSetting.Polite);
         worksHomeConnection = new HyperlinkButton { Content = "查看插件设置", Visibility = Visibility.Collapsed };
         worksHomeConnection.Click += async (_, _) => await RequestNavigationAsync("connections");
-        worksHomeList = new ListView { SelectionMode = ListViewSelectionMode.Single, Visibility = Visibility.Collapsed };
+        worksHomeList = new GridView { SelectionMode = ListViewSelectionMode.Single, Visibility = Visibility.Collapsed };
+        InitializeWorksHomeCards();
         AutomationProperties.SetName(worksHomeList, "最近作品");
         ScrollViewer.SetVerticalScrollMode(worksHomeList, ScrollMode.Disabled);
         ScrollViewer.SetVerticalScrollBarVisibility(worksHomeList, ScrollBarVisibility.Disabled);
+        ScrollViewer.SetHorizontalScrollMode(worksHomeList, ScrollMode.Disabled);
+        ScrollViewer.SetHorizontalScrollBarVisibility(worksHomeList, ScrollBarVisibility.Disabled);
         var library = new HyperlinkButton { Content = "浏览项目文件" };
         library.Click += async (_, _) => await RequestNavigationAsync("library");
 
@@ -103,7 +106,7 @@ public sealed partial class MainWindow
         worksHomeScope.SelectionChanged += async (_, _) =>
         {
             if (updatingWorksHome) return;
-            worksHomeList.Items.Clear();
+            ShowWorksHomeCards([]);
             await RefreshWorksHomeAsync();
         };
         worksHomeSearch.TextChanged += async (_, _) => { if (!updatingWorksHome) await LoadWorksHomeAsync(debounce: true); };
@@ -152,14 +155,16 @@ public sealed partial class MainWindow
             worksHomeSyncNote.Text = projectId is null ? "" : "正在读取同步设置…";
             worksHomeSyncNote.Visibility = Visibility.Visible;
             worksHomeConnection.Visibility = Visibility.Collapsed;
-            SetWorksHomeStatus(projects.Length == 0 ? "" : "正在查找已同步的作品…");
+            if (worksHomeList.Items.Count == 0)
+                SetWorksHomeStatus(projects.Length == 0 ? "" : "正在查找已同步的作品…");
 
-            var recent = new ConcurrentBag<IReadOnlyList<CodexWork>>();
+            var recent = new ConcurrentBag<IReadOnlyList<CodexWorkCard>>();
             var matchingProjects = projects.Where(p => projectId is null || p.Id == projectId);
             // Reuse the project's bounded query. Limit concurrency because each query opens its own store session.
             await Parallel.ForEachAsync(matchingProjects,
                 new ParallelOptions { MaxDegreeOfParallelism = 4, CancellationToken = token }, async (project, ct) =>
-                recent.Add(await SourceStore.ListCodexWorksAsync(project.Id, search, ct).ConfigureAwait(false)));
+                recent.Add(await SourceStore.ListCodexWorkCardsAsync(project.Id, search, WorksHomeLimit + 1, ct)
+                    .ConfigureAwait(false)));
             var sync = projectId is null ? null : await SourceStore.WorkSyncAsync(projectId, token);
             token.ThrowIfCancellationRequested();
 
@@ -179,17 +184,11 @@ public sealed partial class MainWindow
                 worksHomeSyncNote.Visibility = string.IsNullOrEmpty(worksHomeSyncNote.Text) ? Visibility.Collapsed : Visibility.Visible;
             }
 
-            var items = recent.SelectMany(list => list).OrderByDescending(work => work.RecordedAt)
-                .ThenBy(work => work.Title, StringComparer.Ordinal).ThenBy(work => work.Id, StringComparer.Ordinal)
+            var items = recent.SelectMany(list => list).OrderByDescending(card => card.Work.RecordedAt)
+                .ThenBy(card => card.Work.Title, StringComparer.Ordinal).ThenBy(card => card.Work.Id, StringComparer.Ordinal)
                 .Take(WorksHomeLimit + 1).ToArray();
-            var selectedId = ((worksHomeList.SelectedItem as ListViewItem)?.Tag as CodexWork)?.Id;
-            worksHomeList.Items.Clear();
-            foreach (var work in items.Take(WorksHomeLimit))
-            {
-                var row = CreateWorksHomeRow(work, projectNames[work.ProjectId]);
-                worksHomeList.Items.Add(row);
-                if (work.Id == selectedId) worksHomeList.SelectedItem = row;
-            }
+            ShowWorksHomeCards(items.Take(WorksHomeLimit)
+                .Select(card => new WorksHomeCardEntry(card, projectNames[card.Work.ProjectId])).ToArray());
             worksHomeList.Visibility = items.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
             SetWorksHomeStatus((projects.Length, items.Length) switch
             {
@@ -206,7 +205,7 @@ public sealed partial class MainWindow
         catch (Exception ex)
         {
             if (token.IsCancellationRequested) return;
-            worksHomeList.Items.Clear();
+            ShowWorksHomeCards([]);
             worksHomeList.Visibility = Visibility.Collapsed;
             worksHomeSyncNote.Text = "无法读取同步设置。";
             SetWorksHomeStatus("暂时无法读取作品，请点击更新作品重试。");
@@ -247,33 +246,20 @@ public sealed partial class MainWindow
         worksHomeStatus.Visibility = message.Length == 0 ? Visibility.Collapsed : Visibility.Visible;
     }
 
-    private static ListViewItem CreateWorksHomeRow(CodexWork work, string projectName)
-    {
-        var metadata = $"{work.SourceLabel} · {projectName} · {work.RecordedAt.ToLocalTime():yyyy-MM-dd HH:mm}";
-        var caption = WorksHomeCaption(metadata);
-        caption.MaxLines = 2;
-        caption.TextTrimming = TextTrimming.CharacterEllipsis;
-        var title = new TextBlock { Text = work.Title, FontSize = 18, TextWrapping = TextWrapping.Wrap,
-            Foreground = WorksHomeBrush("Ink"), MaxLines = 2, TextTrimming = TextTrimming.CharacterEllipsis };
-        var text = new StackPanel { Spacing = 4 };
-        text.Children.Add(title);
-        text.Children.Add(caption);
-        var row = new ListViewItem { Content = text, Tag = work, Padding = new Thickness(14, 10, 14, 10),
-            HorizontalContentAlignment = HorizontalAlignment.Stretch };
-        AutomationProperties.SetName(row, $"{work.Title}，{metadata}");
-        return row;
-    }
-
     private void ExpandSelectedWork()
     {
         if (expandedWork is not null)
         {
             expandedWork.Children.RemoveAt(expandedWork.Children.Count - 1);
+            if (expandedWorkRow is not null) VariableSizedWrapGrid.SetRowSpan(expandedWorkRow, 1);
             expandedWork = null;
+            expandedWorkRow = null;
         }
-        if (worksHomeList.SelectedItem is not ListViewItem { Content: StackPanel text, Tag: CodexWork work }) return;
+        if (worksHomeList.SelectedItem is not GridViewItem
+            { Content: StackPanel text, Tag: WorksHomeCardEntry entry } row) return;
+        var work = entry.Card.Work;
 
-        var details = new StackPanel { Spacing = 8, Margin = new Thickness(0, 8, 0, 0) };
+        var details = new StackPanel { Spacing = 8, Padding = new Thickness(12, 6, 12, 12) };
         var session = WorksHomeCaption($"来源会话 {work.SessionId}");
         session.IsTextSelectionEnabled = true;
         ToolTipService.SetToolTip(session, $"回合 {work.TurnId}");
@@ -290,15 +276,38 @@ public sealed partial class MainWindow
             var path = await SourceStore.GetOriginalPathAsync(artifact.Id, ct);
             var file = await StorageFile.GetFileFromPathAsync(path);
             ct.ThrowIfCancellationRequested();
+            if (!StillSelected()) return;
             if (!await Launcher.LaunchFileAsync(file)) StatusText.Text = "系统未能打开这份原件。";
         });
-        AddAction("预览", "预览作品", PreviewWorksHomeOriginalAsync);
+        var preview = new Button { Content = "预览" };
+        preview.Click += async (_, _) => await RunAsync("预览作品", async ct =>
+        {
+            if (!StillSelected()) return;
+            if (parsingFiles)
+            {
+                StatusText.Text = "当前解析完成后可预览这份作品。";
+                return;
+            }
+
+            var artifact = await SourceStore.PreviewCodexWorkReferenceAsync(work, ct);
+            ct.ThrowIfCancellationRequested();
+            if (StillSelected())
+            {
+                if (artifact is null) ShowSourceUnavailable();
+                else await PreviewWorksHomeOriginalAsync(entry.Card, artifact, StillSelected, ct);
+            }
+            if (!closing && currentPage == "works" && artifact is { Kind: not "图片" })
+                await RefreshWorksHomeAsync();
+            if (!closing && StatusText.Text == "预览作品…") StatusText.Text = "就绪";
+        });
+        actions.Children.Add(preview);
+        originalActions.Add(preview);
         AddAction("用作范例", "打开范例设置", (artifact, ct) => EditCreativeAsync(work.ProjectId, artifact, ct));
         var source = new Button { Content = "打开来源会话", IsEnabled = Guid.TryParseExact(work.SessionId, "D", out _) };
         source.Click += async (_, _) => await RunAsync("打开来源会话", async ct =>
         {
             ct.ThrowIfCancellationRequested();
-            if (Guid.TryParseExact(work.SessionId, "D", out var sessionId) &&
+            if (StillSelected() && Guid.TryParseExact(work.SessionId, "D", out var sessionId) &&
                 !await Launcher.LaunchUriAsync(new Uri($"codex://threads/{sessionId:D}")))
                 StatusText.Text = "系统未能打开 Codex 来源会话。";
         });
@@ -311,6 +320,10 @@ public sealed partial class MainWindow
 
         text.Children.Add(details);
         expandedWork = text;
+        expandedWorkRow = row;
+        VariableSizedWrapGrid.SetRowSpan(row, 2);
+
+        bool StillSelected() => !closing && currentPage == "works" && ReferenceEquals(worksHomeList.SelectedItem, row);
 
         void AddAction(string label, string operationLabel, Func<ArtifactRecord, CancellationToken, Task> action)
         {
@@ -322,15 +335,18 @@ public sealed partial class MainWindow
                     if (work.ReferenceId is not { } id || await SourceStore.GetAsync(id, ct) is not { IsReference: true } artifact ||
                         artifact.ProjectId != work.ProjectId || artifact.ExtractionStatus is "源文件缺失" or "源文件不可读")
                     {
-                        ShowSourceUnavailable();
+                        if (StillSelected()) ShowSourceUnavailable();
                         return;
                     }
-                    await action(artifact, ct);
+                    if (StillSelected()) await action(artifact, ct);
                 }
                 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or KeyNotFoundException)
                 {
                     var current = work.ReferenceId is { } reference ? await SourceStore.GetAsync(reference, ct) : null;
-                    if (current is null || current.ExtractionStatus is "源文件缺失" or "源文件不可读") ShowSourceUnavailable();
+                    if (current is null || current.ExtractionStatus is "源文件缺失" or "源文件不可读")
+                    {
+                        if (StillSelected()) ShowSourceUnavailable();
+                    }
                     else throw;
                 }
             });
@@ -344,40 +360,6 @@ public sealed partial class MainWindow
             sourceNote.Visibility = Visibility.Visible;
             foreach (var button in originalActions) button.Visibility = Visibility.Collapsed;
         }
-    }
-
-    private async Task PreviewWorksHomeOriginalAsync(ArtifactRecord artifact, CancellationToken ct)
-    {
-        var path = await SourceStore.GetOriginalPathAsync(artifact.Id, ct);
-        var content = new StackPanel { Spacing = 12, MaxWidth = 480 };
-        var extension = Path.GetExtension(path).ToLowerInvariant();
-        if (extension is (".png" or ".jpg" or ".jpeg" or ".bmp" or ".gif" or ".webp") && new FileInfo(path).Length <= 32 * 1024 * 1024)
-        {
-            var file = await StorageFile.GetFileFromPathAsync(path);
-            using var stream = await file.OpenReadAsync();
-            var bitmap = new BitmapImage { DecodePixelWidth = 960 };
-            try
-            {
-                await bitmap.SetSourceAsync(stream);
-                content.Children.Add(new Image { Source = bitmap, Stretch = Stretch.Uniform, MaxHeight = 360 });
-            }
-            catch (System.Runtime.InteropServices.COMException)
-            {
-                content.Children.Add(WorksHomeCaption("无法预览此图片，可打开原件查看。"));
-            }
-        }
-        else if (!string.IsNullOrWhiteSpace(artifact.Preview))
-        {
-            var excerpt = artifact.Preview[..Math.Min(artifact.Preview.Length, 4000)];
-            content.Children.Add(new TextBlock { Text = excerpt, TextWrapping = TextWrapping.Wrap, IsTextSelectionEnabled = true });
-        }
-        else content.Children.Add(WorksHomeCaption("这份作品暂无预览，可打开原件查看。"));
-
-        var original = WorksHomeCaption(path);
-        original.IsTextSelectionEnabled = true;
-        content.Children.Add(original);
-        ct.ThrowIfCancellationRequested();
-        await ShowMessageAsync(artifact.Title, new ScrollViewer { Content = content, MaxHeight = 470 });
     }
 
     private static TextBlock WorksHomeCaption(string text) => new()

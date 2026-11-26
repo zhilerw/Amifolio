@@ -10,6 +10,12 @@ public sealed record CreativeStyle(string Font, string Color, string Style, stri
     public int? Spacing { get; init; }
     public int? Radius { get; init; }
     public string? SampleText { get; init; }
+
+    public bool HasValues() => Spacing.HasValue || Radius.HasValue ||
+        !string.IsNullOrWhiteSpace(Font) || !string.IsNullOrWhiteSpace(Color) ||
+        !string.IsNullOrWhiteSpace(Style) || !string.IsNullOrWhiteSpace(Voice) ||
+        !string.IsNullOrWhiteSpace(Background) || !string.IsNullOrWhiteSpace(SampleText) ||
+        !string.IsNullOrWhiteSpace(ReferenceId);
 }
 
 public sealed record CreativePreference(string Id, string? ProjectId, CreativeStyle Style, string State, long Revision);
@@ -58,6 +64,62 @@ public sealed partial class LearningStore
         }, ct);
     }
 
+    /// <summary>Clears the authored fields for a scope and retains the previous revision for undo.</summary>
+    public Task<long> RemoveCreativeAsync(string? projectId, long expectedRevision, CancellationToken ct = default) =>
+        UseAsync(db =>
+        {
+            var previous = ReadCreative(db, Key(projectId));
+            if (previous is not { State: not "deleted" } || previous.Revision != expectedRevision)
+                throw new InvalidOperationException("偏好已被修改，请重新查看。");
+            if (!string.IsNullOrWhiteSpace(AsCreative(previous)?.Style.ReferenceId))
+                throw new InvalidOperationException("请先移除作品范例，再清除这份偏好。");
+
+            var removed = previous with
+            {
+                Value = "", Text = "", Condition = "", State = "deleted", Reason = "user_cleared",
+                EvidenceIds = [], Revision = previous.Revision + 1, UpdatedAt = Now
+            };
+            History(db, previous);
+            PutEntry(db, removed);
+            return removed.Revision;
+        }, ct);
+
+    public Task<CreativePreference> UndoCreativeRemovalAsync(string? projectId, long expectedRevision,
+        CancellationToken ct = default) => UseAsync(db =>
+        {
+            var current = ReadCreative(db, Key(projectId));
+            if (current is not { State: "deleted" } || current.Revision != expectedRevision)
+                throw new InvalidOperationException("偏好已被修改，请重新查看。");
+
+            var previous = One<LearningEntry>(db,
+                "SELECT payload FROM history WHERE entry_id=$id ORDER BY seq DESC LIMIT 1", ("$id", current.Id));
+            if (previous is not { State: not "deleted" }) throw new InvalidOperationException("没有可撤销的修订。");
+
+            var restored = previous with { Revision = current.Revision + 1, UpdatedAt = Now, Reason = "user_undo" };
+            db.Exec("DELETE FROM history WHERE seq=(SELECT MAX(seq) FROM history WHERE entry_id=$id)", ("$id", current.Id));
+            PutEntry(db, restored);
+            return AsCreative(restored)!;
+        }, ct);
+
+    /// <summary>
+    /// Previews the saved payload for an eligible creative request in a fresh project session.
+    /// A null project previews the global contribution on its own.
+    /// </summary>
+    public Task<string?> PreviewCreativeDeliveryAsync(string? projectId, CancellationToken ct = default)
+    {
+        var scope = Key(projectId);
+        if (!HasState) return Task.FromResult<string?>(null);
+        return UseAsync(db =>
+        {
+            var lines = new List<string>(2);
+            if (ReadCreative(db, "global") is { State: "active" } global)
+                lines.Add(CreativeDeliveryLine(global, isGlobal: true));
+            if (scope != "global" && ReadCreative(db, scope) is { State: "active" } local)
+                lines.Add(CreativeDeliveryLine(local, isGlobal: false));
+            return FormatCreativeDelivery(lines);
+        }, ct);
+    }
+
     public Task<string?> ProvideCreativeAsync(string projectId, string sessionId, string turnId, string prompt,
         CancellationToken ct = default)
     {
@@ -71,14 +133,13 @@ public sealed partial class LearningStore
             var local = ReadCreative(db, project);
             var global = ReadCreative(db, "global");
             var texts = new List<string>(2);
-            Consider(global, "全局默认");
-            Consider(local, "当前项目优先");
+            Consider(global, isGlobal: true);
+            Consider(local, isGlobal: false);
             if (texts.Count == 0) return null;
             db.Exec("DELETE FROM creative_delivery WHERE id IN (SELECT id FROM creative_delivery ORDER BY observed DESC LIMIT -1 OFFSET 4096)");
-            return "以下是用户已确认的创作偏好。当前用户要求优先，项目设置优先于全局默认值。只在与当前任务相关时采用。\n" +
-                string.Join("\n", texts);
+            return FormatCreativeDelivery(texts);
 
-            void Consider(LearningEntry? entry, string label)
+            void Consider(LearningEntry? entry, bool isGlobal)
             {
                 if (entry is not { State: "active" }) return;
                 var id = Hash(sessionId + "\n" + project + "\n" + entry.Id + "\n" + entry.Revision);
@@ -90,11 +151,17 @@ public sealed partial class LearningStore
                     """, ("$id", id), ("$session", sessionId), ("$project", project), ("$turn", turnId),
                     ("$observed", Now.ToUnixTimeMilliseconds()));
                 if (claimed == 0) return;
-                var style = AsCreative(entry)!.Style;
-                texts.Add(label + " · " + CreativeText(style));
+                texts.Add(CreativeDeliveryLine(entry, isGlobal));
             }
         }, ct);
     }
+
+    private static string CreativeDeliveryLine(LearningEntry entry, bool isGlobal) =>
+        (isGlobal ? "全局默认" : "当前项目优先") + " · " + CreativeText(AsCreative(entry)!.Style);
+
+    private static string? FormatCreativeDelivery(List<string> lines) => lines.Count == 0 ? null :
+        "以下是用户已确认的创作偏好。当前用户要求优先，项目设置优先于全局默认值。只在与当前任务相关时采用。\n" +
+        string.Join("\n", lines);
 
     public Task ConfirmCreativeAsync(string projectId, string sessionId, string turnId, CancellationToken ct = default)
     {
@@ -132,7 +199,7 @@ public sealed partial class LearningStore
         UseAsync(db =>
         {
             var current = ReadCreative(db, Key(projectId));
-            return current is { State: not "deleted" } &&
+            return current is not null &&
                 db.Scalar("SELECT 1 FROM history WHERE entry_id=$id LIMIT 1", ("$id", current.Id)) is not null;
         }, ct);
 
@@ -154,12 +221,9 @@ public sealed partial class LearningStore
         if (background.Length > 0 && !ColorPattern.IsMatch(background)) throw new ArgumentException("背景色应为 #RRGGBB。");
         if (value.Spacing is < 0 or > 64) throw new ArgumentOutOfRangeException(nameof(value.Spacing), "间距应为 0–64 px。");
         if (value.Radius is < 0 or > 48) throw new ArgumentOutOfRangeException(nameof(value.Radius), "圆角应为 0–48 px。");
-        if (font.Length + color.Length + style.Length + voice.Length + background.Length + sampleText.Length == 0 &&
-            value.Spacing is null && value.Radius is null && reference.Length == 0)
-            throw new ArgumentException("至少填写一项打算沿用的偏好。");
         if (reference.Length > 0 && (name.Length == 0 || part.Length == 0))
             throw new ArgumentException("请填写这份作品中要沿用的部分。");
-        return new(font, color, style, voice, reference.Length == 0 ? null : reference,
+        var normalized = new CreativeStyle(font, color, style, voice, reference.Length == 0 ? null : reference,
             reference.Length == 0 ? null : name, reference.Length == 0 ? null : part)
         {
             Background = background.Length == 0 ? null : background,
@@ -167,6 +231,8 @@ public sealed partial class LearningStore
             Radius = value.Radius,
             SampleText = sampleText.Length == 0 ? null : sampleText
         };
+        if (!normalized.HasValues()) throw new ArgumentException("至少填写一项打算沿用的偏好。");
+        return normalized;
 
         static string Field(string? text, int maximum, bool allowLineFeed = false)
         {

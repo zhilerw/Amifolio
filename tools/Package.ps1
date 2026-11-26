@@ -20,7 +20,7 @@ function Assert-NativeSummary($Summary, $RuntimeInventory, [string]$Version) {
     $expectedChecks = @{
         empty = 0; edit = 29; motion = 28; configuration = 7; 'configuration-reopen' = 5
         tasks = 16; collection = 84; automation = 31; startup = 21; 'startup-reopen' = 6
-        learning = 27; settings = 25; capacity = 13; m3 = 16; 'm3-reopen' = 12; m4 = 8
+        learning = 27; settings = 25; capacity = 13; m3 = 18; 'm3-reopen' = 12; m4 = 8
     }
     foreach ($scenario in $Summary.scenarios) {
         if (-not $scenario.mode -or -not $expectedChecks.ContainsKey($scenario.mode) -or

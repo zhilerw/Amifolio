@@ -8,7 +8,9 @@ internal static class CreativePreviewCases
     [
         ("creative preview round-trips through reload and preserves native reference", RoundTrip),
         ("creative preview provision stays in scope and follows undo", ProvisionAfterUndo),
+        ("creative next delivery previews exact saved payload without claiming it", PreviewNextDelivery),
         ("creative preview can undo creation and recreation", UndoCreation),
+        ("creative preview clears the last project override to inherit and can undo", ClearToInherit),
         ("creative preview reads historical settings without fabricating undo", HistoricalSettings),
         ("creative preview validates new fields before advancing revision", Validate)
     ];
@@ -67,6 +69,30 @@ internal static class CreativePreviewCases
             "undo did not provision the restored revision");
     }
 
+    private static async Task PreviewNextDelivery(Fixture fixture)
+    {
+        const string project = "project-a";
+        var store = new LearningStore(fixture.DataRoot);
+        Check(await store.PreviewCreativeDeliveryAsync(project) is null && !store.HasState,
+            "empty preview created persisted state");
+        await store.SaveCreativeAsync(null, new("Georgia", "", "", ""), true, 0);
+        var local = await store.SaveCreativeAsync(project, new("", "#24766D", "", "简明"), true, 0);
+        var snapshot = await store.PreviewCreativeDeliveryAsync(project);
+        Check(snapshot is not null && snapshot.Contains("全局默认 · 字体 Georgia") &&
+            snapshot.Contains("当前项目优先 · 主色 #24766D"), "preview omitted saved scope data");
+        var session = Guid.NewGuid().ToString("D");
+        Check(await store.ProvideCreativeAsync(project, session, "one", "设计封面") == snapshot,
+            "real next delivery differed from preview or preview consumed it");
+        await store.ConfirmCreativeAsync(project, session, "one");
+        Check(await store.PreviewCreativeDeliveryAsync(project) == snapshot &&
+            await store.ProvideCreativeAsync(project, session, "two", "设计封面") is null,
+            "preview changed repeat-delivery behavior");
+        await store.SetEntryStateAsync(local.Id, "disabled", local.Revision);
+        Check(await store.PreviewCreativeDeliveryAsync(project) == await store.PreviewCreativeDeliveryAsync(null) &&
+            await store.PreviewCreativeDeliveryAsync("project-b") == await store.PreviewCreativeDeliveryAsync(null),
+            "paused or foreign scope was included");
+    }
+
     private static async Task UndoCreation(Fixture fixture)
     {
         var store = new LearningStore(fixture.DataRoot);
@@ -89,6 +115,45 @@ internal static class CreativePreviewCases
         Check(await store.HasCreativeHistoryAsync(scope), "recreation cannot be undone");
         await store.UndoEntryAsync(recreated.Id, recreated.Revision);
         Check(await store.CreativeAsync(scope) is null, "undoing recreation resurrected deleted settings");
+    }
+
+    private static async Task ClearToInherit(Fixture fixture)
+    {
+        const string project = "project-a";
+        var store = new LearningStore(fixture.DataRoot);
+        var global = await store.SaveCreativeAsync(null, new("Georgia", "#4F7058", "", ""), true, 0);
+        var local = await store.SaveCreativeAsync(project, new("", "#24766D", "", ""), true, 0);
+
+        var removedRevision = await store.RemoveCreativeAsync(project, local.Revision);
+        var reopened = new LearningStore(fixture.DataRoot);
+        Check(await reopened.CreativeSettingsAsync(project) == (null, local.Revision + 1) &&
+            await reopened.HasCreativeHistoryAsync(project), "clearing the project override did not leave an undoable revision");
+        var inherited = await reopened.ProvideCreativeAsync(project, Guid.NewGuid().ToString("D"), "one", "设计封面");
+        Check(inherited is not null && inherited.Contains("全局默认 · 字体 Georgia；主色 #4F7058") &&
+            !inherited.Contains("当前项目优先") && await reopened.CreativeAsync(null) == global,
+            "the cleared project did not inherit the unchanged global preference");
+
+        await ExpectRevisionConflict(() => reopened.UndoCreativeRemovalAsync(project, local.Revision));
+        var restored = await reopened.UndoCreativeRemovalAsync(project, removedRevision);
+        Check(restored == local with { Revision = removedRevision + 1 } && await reopened.CreativeAsync(project) == restored &&
+            await reopened.CreativeAsync(null) == global, "undo did not restore the project override at the next revision");
+
+        await ExpectRevisionConflict(() => reopened.RemoveCreativeAsync(project, local.Revision));
+        removedRevision = await reopened.RemoveCreativeAsync(project, restored.Revision);
+        var recreated = await reopened.SaveCreativeAsync(project, new("", "", "", "") { Radius = 0 }, true, removedRevision);
+        await reopened.UndoEntryAsync(recreated.Id, recreated.Revision);
+        var empty = await reopened.CreativeSettingsAsync(project);
+        Check(empty.Preference is null && empty.Revision == recreated.Revision + 1 && await reopened.HasCreativeHistoryAsync(project),
+            "undoing a new override did not return to the undoable removal");
+        Check((await reopened.UndoCreativeRemovalAsync(project, empty.Revision)).Style == local.Style,
+            "the project override could no longer be restored from the latest tombstone");
+
+        static async Task ExpectRevisionConflict(Func<Task> operation)
+        {
+            try { await operation(); }
+            catch (InvalidOperationException) { return; }
+            throw new InvalidOperationException("a stale creative revision was accepted");
+        }
     }
 
     private static async Task HistoricalSettings(Fixture fixture)
@@ -142,7 +207,16 @@ internal static class CreativePreviewCases
         {
             ReferenceId = "ref-" + new string('e', 64), ReferenceName = "已交付封面", ReferencePart = "标题排版"
         }, true, 0);
-        Check(fromExample.Style.ReferencePart == "标题排版", "a favorite can supply the only creative preference");
+        Check(fromExample.Style.HasValues() && fromExample.Style.ReferencePart == "标题排版",
+            "a favorite can supply the only creative preference");
+        try { await store.RemoveCreativeAsync("example-project", fromExample.Revision); }
+        catch (InvalidOperationException)
+        {
+            Check(await store.CreativeAsync("example-project") == fromExample,
+                "rejected field removal changed the saved reference");
+            return;
+        }
+        throw new InvalidOperationException("field removal discarded the saved reference");
     }
 
     private static void Check(bool condition, string message)

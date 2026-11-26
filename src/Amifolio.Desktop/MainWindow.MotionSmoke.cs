@@ -38,9 +38,22 @@ public sealed partial class MainWindow
         }
         try
         {
-            await RunAsync("短任务验证", _ => { StatusText.Text = "就绪"; return Task.CompletedTask; });
-            await Task.Delay(220);
-            Check(OperationNotice.Visibility == Visibility.Collapsed && !noticeTimer.IsEnabled, "short tasks do not flash a progress notification or retain its timer");
+            // A cold WebView can show the startup notification. The short task starts once that exit settles.
+            var startupExit = Stopwatch.StartNew();
+            while (OperationNotice.Visibility != Visibility.Collapsed && startupExit.ElapsedMilliseconds < 3000) await Task.Delay(15);
+            if (OperationNotice.Visibility != Visibility.Collapsed || noticeTimer.IsEnabled)
+                throw new InvalidOperationException("Startup progress notification did not settle before the motion test.");
+            var shortTaskFlashed = false;
+            var noticeCallback = OperationNotice.RegisterPropertyChangedCallback(UIElement.VisibilityProperty,
+                (_, _) => shortTaskFlashed |= OperationNotice.Visibility == Visibility.Visible);
+            try
+            {
+                await RunAsync("短任务验证", _ => { StatusText.Text = "就绪"; return Task.CompletedTask; });
+                await Task.Delay(220);
+                Check(!shortTaskFlashed && OperationNotice.Visibility == Visibility.Collapsed && !noticeTimer.IsEnabled,
+                    "short tasks do not flash a progress notification or retain its timer");
+            }
+            finally { OperationNotice.UnregisterPropertyChangedCallback(UIElement.VisibilityProperty, noticeCallback); }
             await RunAsync("长任务验证", async _ =>
             {
                 await Task.Delay(300);

@@ -29,7 +29,7 @@ internal static class StartupTiming
             var marks = checkpoints.ToArray();
             return new(1, Environment.ProcessId, processStartedAt,
                 "OS process start plus monotonic elapsed time; process.start predates managed instrumentation",
-                "Initial cached library populated and laid out, controls restored, UI dispatcher heartbeat delivered; not physical input or frame pacing",
+                "Window controls restored and initial creative layout measurable after a dispatcher heartbeat. WebView edit readiness is recorded separately as startup.creative.interactive.",
                 marks.FirstOrDefault(m => m.stage == "startup.ready")?.elapsedMilliseconds, marks);
         }
     }

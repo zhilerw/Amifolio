@@ -3,7 +3,7 @@
  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
  xmlns:local="using:Amifolio.Desktop"
  Title="Amifolio">
- <Grid x:Name="Root" Background="#F6F3EC" Loaded="OnLoaded">
+ <Grid x:Name="Root" Background="#ECECE4" Loaded="OnLoaded">
   <Grid.RowDefinitions><RowDefinition Height="38" /><RowDefinition Height="*" /></Grid.RowDefinitions>
   <Border Grid.Row="0" BorderBrush="{StaticResource Line}" BorderThickness="0,0,0,1" Background="{StaticResource Paper}">
    <Grid x:Name="TitleDragArea" Padding="20,0,160,0">
@@ -15,7 +15,7 @@
   </Border>
   <Grid Grid.Row="1">
    <Grid.ColumnDefinitions><ColumnDefinition x:Name="NavigationColumn" Width="110" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-   <Border Background="#EFECE4" BorderBrush="{StaticResource Line}" BorderThickness="0,0,1,0">
+   <Border Background="#E6E7DD" BorderBrush="{StaticResource Line}" BorderThickness="0,0,1,0">
     <Grid Padding="12,20,12,12" RowSpacing="16">
      <Grid.RowDefinitions><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
      <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
@@ -30,14 +30,14 @@
    </Border>
    <Grid Grid.Column="1">
     <local:LearningView x:Name="LearningPage" Visibility="Collapsed"/>
-    <Grid x:Name="WorksHomePage" />
-    <Grid x:Name="CreativePage" Visibility="Collapsed" Padding="24,18" RowSpacing="10">
+    <Grid x:Name="WorksHomePage" Visibility="Collapsed"/>
+    <Grid x:Name="CreativePage" Padding="24,17,24,15" RowSpacing="9">
      <Grid.RowDefinitions>
       <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/>
      </Grid.RowDefinitions>
      <Grid ColumnSpacing="12">
       <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-      <TextBlock Text="偏好" Style="{StaticResource PageHeading}" VerticalAlignment="Center"/>
+      <TextBlock Text="风格样张" Style="{StaticResource PageHeading}" FontSize="46" Margin="0,2,0,2" VerticalAlignment="Center" AutomationProperties.HeadingLevel="Level1"/>
       <Button Grid.Column="1" Content="更多" AutomationProperties.Name="更多偏好设置">
        <Button.Flyout><MenuFlyout>
         <MenuFlyoutItem Text="会话学习与候选" Click="OpenCreativeLearning"/>
@@ -55,16 +55,23 @@
                 AutomationProperties.Name="偏好作用域" SelectionChanged="CreativeScopeChanged"/>
       <Button Grid.Column="1" x:Name="CreativeToggle" Content="启用" Click="ToggleCreative" IsEnabled="False"/>
      </Grid>
-     <Grid Grid.Row="2" x:Name="CreativePreviewFrame" Background="{StaticResource Paper}" CornerRadius="14">
+     <Grid Grid.Row="2" x:Name="CreativePreviewFrame" Background="#ECECE4">
       <TextBlock x:Name="CreativePreviewNotice" Text="正在打开风格预览…" TextWrapping="Wrap" Margin="20" />
      </Grid>
      <StackPanel Grid.Row="3" Spacing="6">
+      <Border Height="1" Background="{StaticResource Line}"/>
       <TextBlock x:Name="CreativeStatus" Text="正在读取偏好…" Style="{StaticResource Caption}" TextWrapping="Wrap"
                  AutomationProperties.LiveSetting="Polite"/>
-      <StackPanel Orientation="Horizontal" Spacing="8">
-       <Button x:Name="CreativeSave" Content="保存偏好" Click="SaveCreativePage" IsEnabled="False" Background="{StaticResource Accent}" Foreground="White"/>
-       <Button x:Name="CreativeUndo" Content="撤销" Click="UndoCreativePage" IsEnabled="False"/>
-      </StackPanel>
+      <Grid ColumnSpacing="8" RowSpacing="5" SizeChanged="CreativeFooterSizeChanged">
+       <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+       <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+       <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8">
+        <Button x:Name="CreativeSave" Content="保存偏好" Click="SaveCreativePage" IsEnabled="False" Background="{StaticResource Accent}" Foreground="White"/>
+        <Button x:Name="CreativeUndo" Content="撤销" Click="UndoCreativePage" IsEnabled="False"/>
+       </StackPanel>
+       <Button x:Name="CreativeDelivery" Grid.Column="1" Content="查看下次提供内容"
+               Click="ShowNextCreativeDelivery" IsEnabled="False" HorizontalAlignment="Left"/>
+      </Grid>
      </StackPanel>
     </Grid>
     <Grid x:Name="NativeMemoryPage" Visibility="Collapsed" Padding="24,16,24,22" RowSpacing="10">

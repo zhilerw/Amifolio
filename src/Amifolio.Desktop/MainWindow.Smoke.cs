@@ -59,6 +59,8 @@ public sealed partial class MainWindow
             await RenderSnapshotAsync(reportPath + ".png");
             await File.WriteAllTextAsync(reportPath, JsonSerializer.Serialize(new { status = "native-pages-loaded", uiThread = DispatcherQueue.HasThreadAccess, pages = observations, artifacts = ArtifactList.Items.Count, iconCornerRadius = BrandIcon.CornerRadius.TopLeft,
                 headerHeight = Root.RowDefinitions[0].Height.Value, rootRows = Root.RowDefinitions.Count, previewRegression, nativeMemoryRegression, editRegression, motionRegression, configurationRegression, taskRegression, collectionRegression, automationRegression, contextRaceRegression, startupRegression, learningRegression, settingsRegression, capacityRegression, dialogs = smokeDialogs,
+                creativeStartup = previewRegression is null ? null : new { WindowReady = startupReadyEvidence,
+                    Preview = StartupTiming.Snapshot().marks.FirstOrDefault(mark => mark.stage == "startup.creative.interactive") },
                 windowCorners = new { supported = OperatingSystem.IsWindowsVersionAtLeast(10, 0, 22000), applyResult = cornerPreferenceResult, actualPreference = WindowAppearance.ReadCornerPreference(this) } }, new JsonSerializerOptions { WriteIndented = true }));
         }
         catch (Exception ex) { await File.WriteAllTextAsync(reportPath + ".error.txt", ex.ToString()); }

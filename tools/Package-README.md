@@ -1,6 +1,6 @@
-# Amifolio 1.1.0 · Windows x64
+# Amifolio 1.1.1 · Windows x64
 
-这是 Windows 11 x64 预发行版。见 [1.1.0 更新记录](docs/releases/1.1.0.md)。
+这是 Windows 11 x64 预发行版。见 [1.1.1 更新记录](docs/releases/1.1.1.md)。
 
 在 Codex 插件设置添加随包提供的 [Amifolio 本地插件市场](codex/README.md)，安装插件并信任钩子。打开「作品」，选一个项目开启同步。Codex 完成新回合后，点击「更新作品」查看上传件和交付物。选中作品后可以打开原件、返回来源会话或设为范例。
 
@@ -26,7 +26,7 @@
 
 样张使用所选本机字体，未安装时启用系统回退。
 
-解压前将 `Get-FileHash -Algorithm SHA256 -LiteralPath .\Amifolio-1.1.0-win-x64.zip` 的结果与旁置 `.sha256.txt` 比对。ZIP 内的 `PACKAGE-MANIFEST.json` 记录全部有效载荷路径、字节数、逐文件 SHA-256 和本机原生测试摘要的 SHA-256。有效载荷逐项与原生测试前后核对的记录相符。解压时保留整个目录，包括 `desktop/Assets/StylePreview`、`bridge`、`worker` 和 `codex/marketplace` 内以点开头的清单路径。第三方许可见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+解压前将 `Get-FileHash -Algorithm SHA256 -LiteralPath .\Amifolio-1.1.1-win-x64.zip` 的结果与旁置 `.sha256.txt` 比对。ZIP 内的 `PACKAGE-MANIFEST.json` 记录全部有效载荷路径、字节数、逐文件 SHA-256 和本机原生测试摘要的 SHA-256。有效载荷逐项与原生测试前后核对的记录相符。解压时保留整个目录，包括 `desktop/Assets/StylePreview`、`bridge`、`worker` 和 `codex/marketplace` 内以点开头的清单路径。第三方许可见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
 
 旧版用户可按 [Codex 接入材料](codex/README.md) 停用独立 Amifolio MCP 与结束钩子，再启用 1.1 插件。
 

@@ -26,7 +26,12 @@ public sealed partial class MainWindow
     private void SetScopes(ComboBox box,string globalLabel)
     {
         var previousChoice=SelectedScope(box);var previous=previousChoice?.Id;
-        var choices=new[]{new ScopeChoice(null,globalLabel)}.Concat(projects.Select(p=>new ScopeChoice(p.Id,p.Name))).ToList();
+        var duplicateNames = projects.GroupBy(p => p.Name, StringComparer.OrdinalIgnoreCase)
+            .Where(group => group.Skip(1).Any()).Select(group => group.Key).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var choices = new List<ScopeChoice> { new(null, globalLabel) };
+        choices.AddRange(projects.Select(project => new ScopeChoice(project.Id,
+            duplicateNames.Contains(project.Name) || string.Equals(project.Name, globalLabel, StringComparison.OrdinalIgnoreCase)
+                ? $"{project.Name} · {project.RootPath ?? project.Id}" : project.Name)));
         // Do not silently relabel a loaded project editor as global when a scan
         // removes its root. Keep the identity until the user chooses another scope.
         if(previous is not null&&!choices.Any(x=>x.Id==previous))
