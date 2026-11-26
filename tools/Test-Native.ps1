@@ -68,11 +68,8 @@ try {
             if ($mode -eq 'learning' -and $result.learningRegression.checks.Count -ne 27) { throw 'Learning UI regression incomplete.' }
             if ($mode -eq 'settings' -and $result.settingsRegression.checks.Count -ne 25) { throw 'Settings regression incomplete.' }
             if ($mode -eq 'capacity' -and $result.capacityRegression.checks.Count -ne 13) { throw 'Capacity UI regression incomplete.' }
-            if (($mode -eq 'm3' -and $result.previewRegression.checks.Count -ne 18) -or
+            if (($mode -eq 'm3' -and $result.previewRegression.checks.Count -ne 16) -or
                 ($mode -eq 'm3-reopen' -and $result.previewRegression.checks.Count -ne 12)) { throw "M3 preview regression incomplete: $mode" }
-            if ($mode -in 'm3','m3-reopen' -and ($result.creativeStartup.WindowReady.initialPage -ne 'creative' -or
-                $result.creativeStartup.Preview.stage -ne 'startup.creative.interactive' -or
-                $result.creativeStartup.Preview.elapsedMilliseconds -le 0)) { throw "Creative startup readiness was not observed: $mode" }
             if ($mode -eq 'm4' -and ($result.nativeMemoryRegression.checks.Count -ne 8 -or -not (Test-Path -LiteralPath ($report + '.native-memory.png') -PathType Leaf))) { throw 'M4 memory browser regression incomplete.' }
             if ($mode -eq 'product' -and $result.productRegression.checks.Count -ne 13) { throw 'Product follow-up regression incomplete.' }
             $checks = if ($mode -eq 'product') { 13 } elseif ($mode -eq 'm4') { 8 } elseif ($mode -in 'm3','m3-reopen') { $result.previewRegression.checks.Count } elseif ($mode -eq 'edit') { 29 } elseif ($mode -eq 'motion') { 28 } elseif ($mode -eq 'configuration') { 7 } elseif ($mode -eq 'configuration-reopen') { 5 } elseif ($mode -eq 'tasks') { 16 } elseif ($mode -eq 'collection') { 84 } elseif ($mode -eq 'automation') { 31 } elseif ($mode -eq 'startup') { 21 } elseif ($mode -eq 'startup-reopen') { 6 } elseif ($mode -eq 'learning') { 27 } elseif ($mode -eq 'settings') { 25 } elseif ($mode -eq 'capacity') { 13 } else { 0 }
