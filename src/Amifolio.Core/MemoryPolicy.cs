@@ -191,6 +191,22 @@ public static class MemoryPolicy
         return HasIndependentTriple(support, requireTwoProjects: false) ? Active("three_independent_user_turns_and_texts") : Candidate("insufficient_independent_user_evidence");
     }
 
+    public static IReadOnlyList<MemoryProposal> ExplicitProjectPreferences(MemoryEvidence source)
+    {
+        if (!VerifiedUser(source) || ContainsSensitiveText(source.Text)) return [];
+        var result = new List<MemoryProposal>();
+        foreach (var dimension in Lexicon.Select(item => item.Dimension).Distinct())
+        {
+            var supports = Parse(source, dimension).Where(s => s.Ongoing && !s.Temporary && s.SourceScope != "global")
+                .Select(s => (s.Value, s.Condition)).Distinct().ToArray();
+            if (supports.Length != 1) continue;
+            var (value, condition) = supports[0];
+            var proposal = new MemoryProposal("style", dimension, value, source.Text.Trim(), "project", condition, [source.Id]);
+            if (Evaluate(proposal, [source], new HashSet<string>()).State == "active") result.Add(proposal);
+        }
+        return result;
+    }
+
     /// <summary>Heuristic rejection filter, bounded at 8192 UTF-16 code units; oversize/malformed text fails closed.
     /// Use it on raw text before storage/projection, not as a guarantee that every secret or injection is recognized.</summary>
     public static bool ContainsSensitiveText(string text)

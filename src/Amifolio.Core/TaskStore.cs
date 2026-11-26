@@ -113,26 +113,12 @@ public sealed class TaskStore
     public async Task RecoverAsync(CancellationToken ct=default)
     {
         var running=await store.DbAsync<IReadOnlyList<WorkItem>>(db=>{using var c=Command(db,$"SELECT {Columns} FROM work_items WHERE state='running' OR (kind='generate' AND state='queued')");using var r=c.ExecuteReader();var items=new List<WorkItem>();while(r.Read())items.Add(Read(r));return items;},ct).ConfigureAwait(false);
-        var pending=await RecoverAvailableAsync(running,ct).ConfigureAwait(false);
-        foreach(var delay in new[]{25,100})
-        {
-            if(pending.Count==0)break;
-            StorageFaults.Handler.Value?.Invoke("task-recovery-lock-busy");
-            await Task.Delay(delay,ct).ConfigureAwait(false);
-            pending=await RecoverAvailableAsync(pending,ct).ConfigureAwait(false);
-        }
-    }
-
-    private async Task<IReadOnlyList<WorkItem>> RecoverAvailableAsync(IReadOnlyList<WorkItem> running,CancellationToken ct)
-    {
-        var busy=new List<WorkItem>();
         foreach(var item in running)
         {
-            ct.ThrowIfCancellationRequested();using var file=TryLock(item.Id);if(file is null){busy.Add(item);continue;}
+            ct.ThrowIfCancellationRequested();using var file=TryLock(item.Id);if(file is null)continue;
             await store.WriteAsync(db=>{using var tx=db.BeginTransaction(deferred:false);var current=Find(db,item.Id,tx);if(current is not null&&(current.State=="running"||current.Kind=="generate"&&current.State=="queued"))
                 {SetState(db,tx,item.Id,current.Kind=="generate"?"interrupted":current.Attempts<current.MaxAttempts?"queued":"failed",current.Kind=="generate"?"interrupted":current.Attempts<current.MaxAttempts?null:"attempt_limit");if(current.Kind=="extract"&&current.Attempts>=current.MaxAttempts)UpdateExtractionStatus(db,tx,current,"提取失败");}tx.Commit();return true;},ct).ConfigureAwait(false);
         }
-        return busy;
     }
 
     public Task<bool> IsOwnerAsync(WorkLease lease,CancellationToken ct=default)=>store.DbAsync(db=>Owns(db,null,lease),ct);

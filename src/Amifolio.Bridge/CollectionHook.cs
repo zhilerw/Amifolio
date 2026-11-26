@@ -5,7 +5,7 @@ namespace Amifolio.Bridge;
 
 internal static partial class CollectionHook
 {
-    internal static async Task<int> RunAsync(string dataRoot,TextWriter output)
+    internal static async Task<int> RunAsync(string dataRoot,TextWriter output,bool collectWorks=false)
     {
         using var timeout=new CancellationTokenSource(TimeSpan.FromSeconds(50));
         try
@@ -19,17 +19,20 @@ internal static partial class CollectionHook
             await using var session=await StorageLease.SessionAsync(dataRoot,timeout.Token);
             var store=await Program.OpenReferenceStoreAsync(dataRoot,timeout.Token);
             var current=Path.GetFullPath(cwd.GetString()!);
-            var comparison=OperatingSystem.IsWindows()?StringComparison.OrdinalIgnoreCase:StringComparison.Ordinal;
-            var project=store.CodexProjects.Where(p=>current.Equals(p.RootPath,comparison)||current.StartsWith(Path.TrimEndingDirectorySeparator(p.RootPath)+Path.DirectorySeparatorChar,comparison))
-                .OrderByDescending(p=>p.RootPath.Length).FirstOrDefault()??throw new IOException("Stop cwd is not a discovered project.");
+            var project=HookInput.ResolveProject(store.CodexProjects,current)??throw new IOException("Stop cwd is not a discovered project.");
             // RefreshCodexProjectsAsync also invalidates changed/missing reference metadata.
             // Default remains metadata-only. Only the separate project capture consent permits
             // bounded user-turn evidence reads; a caller transcript_path is never used.
-            var learning=await LearningFallbackAsync(store,project,current,root,timeout.Token);
-            await output.WriteLineAsync(JsonSerializer.Serialize(new{@continue=true,suppressOutput=true,systemMessage=(string?)null,amifolioLearning=learning},Program.JsonOptions));return 0;
+            if (collectWorks && HookInput.ReadString(root, "session_id", 128) is { } sessionId &&
+                HookInput.ReadString(root, "turn_id", 128) is { } turnId)
+                await new LearningStore(dataRoot).ConfirmCreativeAsync(project.Id, sessionId, turnId, timeout.Token);
+            var works = collectWorks ? await SyncWorksAsync(store, project, root, timeout.Token) : null;
+            var learning=await LearningFallbackAsync(store,project,current,root,timeout.Token,collectWorks);
+            await output.WriteLineAsync(JsonSerializer.Serialize(new{@continue=true,suppressOutput=true,systemMessage=(string?)null,amifolioLearning=learning,amifolioWorks=works},Program.JsonOptions));return 0;
         }
         catch(Exception e)when(e is not OutOfMemoryException)
         {
+            if (collectWorks) { await output.WriteLineAsync("{}"); return 0; }
             await output.WriteLineAsync(JsonSerializer.Serialize(new{@continue=true,suppressOutput=false,systemMessage="Amifolio 项目引用状态刷新未完成；请在应用中刷新项目。本次未复制或解析项目文件。"},Program.JsonOptions));
             await Console.Error.WriteLineAsync("Amifolio hook: "+e.GetType().Name);return 1;
         }

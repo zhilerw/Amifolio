@@ -53,6 +53,7 @@ tests = tests.Concat(EnvironmentCases.All).ToArray();
 tests = tests.Concat(LearningContextCases.All).ToArray();
 tests = tests.Concat(SetupUpdateCases.All).ToArray();
 tests = tests.Concat(ReleaseCases.All).Concat(SessionOnlyCases.All).Concat(LearningBackgroundBoundaryCases.All).ToArray();
+tests = tests.Concat(NativeMemoryCases.All).ToArray();
 var failed = 0;
 var selected = args.Length == 2 && args[0] == "--filter" ? tests.Where(t => t.Name.Contains(args[1], StringComparison.OrdinalIgnoreCase)).ToArray() : tests;
 foreach (var test in selected)

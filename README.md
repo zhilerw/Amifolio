@@ -1,92 +1,37 @@
 # Amifolio
 
-基于C# + WinUI 3。Amifolio 是 Windows 本机 Codex 的只读辅助工作台：发现 Codex 关联的真实项目目录，按原目录浏览文件，显式选择后解析，并为 Agent 提供可控的概要、风格与记忆。
+基于 C# + WinUI 3 的 Windows 桌面应用，配有 Codex 插件，可查看上传件和交付物、编辑创作偏好、管理作品范例与本机指令。
 
-面向 Windows 11 x64。分发方式为免安装 ZIP，需要系统运行时。见[安装、升级与排查](docs/RELEASE.md)。
-
-从 [GitHub Releases](https://github.com/zhilerw/Amifolio/releases)获取运行包、源码包及校验文件。
-
-## 本轮：会话学习
-
-从“风格与记忆”进入，先选择项目并保存授权。可选无需Key的会话内整合，或另行授权使用保存的AI配置在后台整合。概述有回执，画像有依据；支持查看、修改、取消、删除、停用与撤销。新授权默认关闭。旧文件候选与旧通用偏好入口已停用，在“设置 → 旧资料”只读保留，不参与新学习。
-
-在“环境配置”页检查 MCP、skills 和本机自定义指令，按需更新并手动重启 Codex。结束钩子还需要在 Codex 中信任。
+当前版本为 **1.1.0 预发行版**。Windows 11 x64 运行包和源码包见 [GitHub Releases](https://github.com/zhilerw/Amifolio/releases)。安装、升级和回退见[运行说明](docs/RELEASE.md)。
 
 ## Amifilo可以做什么
 
-- **发现与浏览项目**：有界读取有效 `CODEX_HOME` 的项目元数据与必要会话头部，显示存在于本机的真实项目。按直接子目录逐层浏览，提供面包屑、返回、扫描和刷新。会话 cwd 只证明目录关联，不能证明目录内每个文件由 Codex 生成。
-- **先扫描，后解析**：扫描只读目录元数据，不自动读取正文、复制文件或排队解析。选择文件并点击“解析所选文件”后，受限工作进程直接读取原路径，应用保存校验、状态和有界片段。
-- **核对来源**：文本 PDF 按页、DOCX 按段落、XLSX 按工作表/单元格、PPTX 按幻灯片/段落、文本与代码按行定位。检测到原件变化、移动、缺失或不可读后使已有提取失效，需重新核对或显式解析。见[格式说明](docs/FORMATS.md)。
-- **管理会话学习**：全局与项目分开授权。短期要求先作为候选，满足证据条件后才生效；用户可查看、修改、停用、删除与撤销。共享使用当前许可，旧版开关不能代替新版授权。
-- **环境配置**：本机只读检查 MCP、组件、skills 和 AGENTS 入口，明确区分本机配置与宿主验证；可预览后安装或备份追加配置。基础 skills 安装无需 Key。这些是必要配置例外，不能扩展成项目文件写权限。
-- **日志与可选模型**：在“设置 → 日志”查看、明确控制及重试任务。AI 服务地址、模型和加密密钥可本机保存/清除；保存不发送请求。共享、原件路径与远程发送分别授权，扫描或解析不会连带开启。
+- 按项目查看已登记的 Codex 上传件与交付物，浏览预览、打开原件和核对会话来源。
+- 在风格样张上调整全局或项目偏好，把有参考价值的作品设为范例。
+- 在「指令」中查看与编辑全局或项目 AGENTS.md，保存前核对差异，并可撤销受管变更。
+- 手动浏览、扫描和解析已发现的项目目录。从「设置」可进入项目文件浏览、扫描和手动解析。文本 PDF、现代 Office、文本和代码支持有界提取与来源定位。
 
-当前产品没有上传、手动创建项目、修改作品元数据、复制/快照、改名、移动或删除源文件的入口。旧归档副本与旧文档迁至数据目录的 history，保留一致的旧索引快照和恢复日志，不复制或写入项目原件。当前引用索引、AI配置、目录缓存和会话学习数据保留；旧进程重新创建资料时停止整理并保留两侧内容。
+## 1.1.0 更新
 
-来源核对有及时性边界：目录扫描只比较文件大小和修改时间（size/mtime），不逐文件读取正文或计算哈希。选择已解析详情时重算 SHA-256。明确预览或生成候选时，对本次最多24个片段来源进行内容校验，模型返回后再次核对，防止同大小、同时间的改写混入候选。普通上下文读取仍依据元数据和已有片段，没有实时监视或每次全量哈希保证；重要内容应核对原文。
+- 新增 Codex 本地插件市场，可安装 Amifolio 插件、启用 MCP，并在 Codex 内审核和信任结束钩子。
+- 「作品」聚合已识别的 Codex 上传件和交付物，可跳转到来源或设为范例。首屏风格样张用于编辑全局和项目偏好。
+- 「指令」支持查看、编辑、核对差异与撤销 AGENTS.md 变更。提供只读的 Codex 原生记忆浏览入口。
 
-## 第一次使用
+更新记录 [1.1.0](docs/releases/1.1.0.md)。
 
-界面文字统一使用本机“华文宋体”，不随安装包分发字体文件。未安装该字体的系统会使用 Windows 的字体回退。
+## 安装与构建
 
-启动先显示上次目录快照，后台核对当前与已浏览目录，不以缓存授予源文件或部署权限。缓存最多4 MiB、16个目录及5000个条目，损坏可丢弃，不改动原件。扫描、迁移和更新检查不会自动发送模型请求。
+运行包需要 Windows 11 x64、.NET Desktop Runtime 10、Windows App Runtime 2.6.5、Visual C++ x64 运行库和 Edge WebView2 Runtime。完整解压后运行 `desktop/Amifolio.exe`。Codex 的接入、升级及移除参见[插件说明](plugins/codex/README.md)。
 
-1. 扫描 Codex 项目，核对实际目录与发现警告。未发现项目时检查当前宿主的 `CODEX_HOME` 和目录可用性，不手动创建项目来补齐列表。
-2. 点击项目卡片逐层进入原目录；刷新只更新当前目录信息，不解析正文。过滤作用于当前目录。
-3. 选择所需文件，显式点击解析；查看状态、预览和来源定位。失败、超限、不支持、扫描件需 OCR 均应可见。
-4. 在“风格与记忆”选择项目，分别授权会话记录、整合和共享。后台模型整合需另行保存AI配置并允许远程发送；共享全局偏好还需逐项目授权。
-5. 在“环境配置”核对本机状态和预览，明确选择后写入 MCP/skill/必要 AGENTS.md 入口。在“本机自定义指令”查看和修改 AGENTS.md。手动重开 Codex，再用新会话核对实际读取行为；AGENTS 是阅读指导，不是权限隔离。
-
-详见[扫描与接入](docs/COLLECTION.md)、[任务](docs/TASKS.md)和[数据恢复说明](docs/STORAGE-RECOVERY.md)。
-
-支持返回/前进、鼠标侧键、Alt+方向键、排序、多选与复制路径。设置可显式检查稳定版本并打开固定 GitHub Release 下载页；私有仓库无法匿名确认版本时会说明，不会报告为已是最新版。
-
-## 运行与本机数据
-
-保留整个匹配的运行目录并启动 `desktop/Amifolio.exe`，不要只移动 exe。源码构建后也可运行：
+从源码构建需要 Windows x64、PowerShell 7.2、Git、Windows SDK 工具链，以及 [global.json](global.json) 指定的 .NET SDK。
 
 ```powershell
-.\tools\Start-Amifolio.ps1
+.	ools\Build.ps1
+.	ools\Test-Native.ps1
 ```
 
-默认应用数据目录为 `%LOCALAPPDATA%\Amifolio`，与项目原目录分开；`tools/Start-Amifolio.ps1 -DataRoot 'E:\AmifolioData'` 可选择独立应用数据目录。桌面、桥接及 MCP 必须使用同一数据根。`CODEX_HOME` 另行决定宿主元数据来源，应用不会通过修改宿主配置修复发现问题。目录适配不是官方稳定协议，未知格式、排除项及达到限制时应报告不完整。
-
-这是框架依赖的 Windows x64 开发预览程序，需要匹配的 .NET Desktop Runtime 10 与 Windows App Runtime，不是签名安装包。跨机器、ARM64、长期大库及参考设备性能尚待验收。关闭窗口结束本窗口工作，不安装常驻扫描服务；独立 MCP 进程生命周期由宿主管理。
-
-## Agent 桥接
-
-已构建的桥接可查询发现的项目、登记一个现有文件的引用和查看状态：
-
-```powershell
-.\artifacts\Amifolio\bridge\Amifolio.Bridge.exe projects
-.\artifacts\Amifolio\bridge\Amifolio.Bridge.exe submit 'E:\已发现项目\report.docx' --project '<发现返回的项目 ID>'
-.\artifacts\Amifolio\bridge\Amifolio.Bridge.exe list --search report --project '<项目 ID>'
-.\artifacts\Amifolio\bridge\Amifolio.Bridge.exe status '<引用 ID>'
-```
-
-自定义应用目录用 `--data-root`。`submit` 仅登记已发现项目内普通文件的原路径引用，回执 `referenced` 不代表已经复制、备份或解析；未知项目和任意目录不能作为兜底范围。解析由应用中的明确用户操作发起，桥接不提供自动解析入口。默认桥接拒绝旧 `repo`、`backup`、`restore`，不会用兼容命令恢复复制流程。
-
-`mcp` 启动本机 stdio 服务。MCP 不是按 Agent 身份隔离的多租户服务；项目筛选是查询条件。上下文按准确作用域、启停设置和许可提供，未确认候选不共享。明确安装并信任的结束钩子只有限刷新发现与既有引用状态，不扫描输出目录、不复制原件、不自动解析或调用模型。工具范围、安装/移除及限制见 [Codex 接入说明](plugins/codex/README.md)；运行包对应路径为 `codex/README.md`。
-
-## 构建与验证
-
-开发需要 Windows x64、PowerShell 7、Git、[global.json](global.json) 规定的 .NET SDK 及 Windows SDK 工具链，首次依赖还原需访问 NuGet。原生窗口验证还需 Windows App Runtime 和交互桌面。以下为维护者操作步骤，不表示本轮已执行或通过：
-
-```powershell
-.\tools\Build.ps1
-# 仅在 NuGet 连接失败且现有本机代理仍运行时使用：
-.\tools\Build.ps1 -UseExistingLocalProxy
-.\tools\Test-Native.ps1
-# 替换为本次测试生成的实际路径：
-.\tools\Package.ps1 -NativeSummary '.local/native-tests/<本次目录>/summary.json'
-```
-
-构建脚本锁定还原解决方案、构建、运行四组控制台测试并发布到 `artifacts/Amifolio`。不能用一次 `dotnet test` 的退出码代替运行这些测试。测试使用隔离夹具，不修改正式用户配置或调用收费模型；真实宿主/服务兼容性仍须单独验收。打包校验同一份已测程序的二进制清单、哈希与 ZIP 内容；重新构建后原生证据也须更新。详见[运行包说明](tools/Package-README.md)。
+构建脚本锁定还原依赖、构建解决方案、运行四组测试并发布到 `artifacts/Amifolio`。依赖和授权见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
 
 ## 未来与展望
 
-OCR、目录变更通知与更精确的会话产物归属是可选增强。
-
-## 历史与授权
-
-贡献见 [CONTRIBUTING.md](CONTRIBUTING.md)，安全反馈见 [SECURITY.md](SECURITY.md)。[第三方许可](THIRD_PARTY_NOTICES.md)仅适用于所列第三方内容。
+继续验收真实 Codex 桌面中的文档收集、实时偏好注入与空闲计时，并验证独立环境上的升级与回退。

@@ -1,0 +1,13 @@
+{
+  "name": "amifolio",
+  "version": "1.1.0",
+  "description": "在 Codex 使用已确认的创作偏好并登记作品。",
+  "hooks": "./hooks/hooks.json",
+  "mcpServers": "./.mcp.json",
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Amifolio",
+    "shortDescription": "作品与可编辑的创作偏好",
+    "longDescription": "使用已确认的项目创作偏好，并在 Amifolio 中查看作品来源。"
+  }
+}

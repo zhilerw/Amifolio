@@ -51,6 +51,7 @@ internal static class LearningSchema
         var current=Number(db,tx,"PRAGMA user_version");
         if(current is not(0 or 1 or Version))throw new IOException("学习数据库版本已改变。");
         Exec(db,tx,"""
+            CREATE TABLE IF NOT EXISTS creative_delivery(id TEXT PRIMARY KEY,session TEXT NOT NULL,project TEXT NOT NULL,turn TEXT NOT NULL,observed INTEGER NOT NULL,confirmed INTEGER NOT NULL DEFAULT 0);
             CREATE TABLE IF NOT EXISTS policies(id TEXT PRIMARY KEY,payload TEXT NOT NULL);
             CREATE TABLE IF NOT EXISTS receipts(seq INTEGER PRIMARY KEY AUTOINCREMENT,id TEXT UNIQUE NOT NULL,scope TEXT NOT NULL,fingerprint TEXT NOT NULL,payload TEXT NOT NULL,eligible INTEGER NOT NULL,processed INTEGER NOT NULL,job_id TEXT);
             CREATE INDEX IF NOT EXISTS ix_learning_pending ON receipts(scope,processed,eligible,seq);

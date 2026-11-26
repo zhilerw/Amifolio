@@ -102,7 +102,7 @@ public sealed partial class MainWindow
         await NavigateAsync("library");LibraryNav.ApplyTemplate();Root.UpdateLayout();var presenter=VisualTreeHelper.GetChild(LibraryNav,0) as ContentPresenter;var color=(presenter?.Background as SolidColorBrush)?.Color;
         VisualStateManager.GoToState(LibraryNav,"PointerOver",true);Root.UpdateLayout();Check(presenter is not null&&(presenter.Background as SolidColorBrush)?.Color==color,"selected-nav-hover-stays-identical");
         VisualStateManager.GoToState(LibraryNav,"Pressed",true);Root.UpdateLayout();Check((presenter!.Background as SolidColorBrush)?.Color==color,"selected-nav-press-stays-identical");VisualStateManager.GoToState(LibraryNav,"Normal",false);
-        Check(ProjectsNav.Style==(Style)Application.Current.Resources["NavButton"],"unselected-navigation-keeps-hover-style");
+        Check(AgentsNav.Style==(Style)Application.Current.Resources["NavButton"],"unselected-navigation-keeps-hover-style");
         var lightResources=Application.Current.Resources;
         Check((lightResources["ComboBoxDropDownBackground"] as SolidColorBrush)?.Color==(lightResources["MenuFlyoutPresenterBackground"] as SolidColorBrush)?.Color,"dropdowns-and-menus-share-cream");
         Check((CornerRadius)Application.Current.Resources["OverlayCornerRadius"]==new CornerRadius(5),"popup-corners-unified");

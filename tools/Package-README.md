@@ -1,6 +1,12 @@
-# Amifolio · Windows 11 x64
+# Amifolio 1.1.0 · Windows x64
 
-Amifolio 是本机 Codex 的只读辅助工作台：发现真实项目、按原目录浏览、显式选择后解析。首次请到“风格与记忆”选择项目并保存授权；会话内整合无需 API key，后台模型整合需另行配置和授权。旧资料在“设置 → 旧资料”只读保留。设置可检查稳定版并打开 GitHub 下载页；私有仓库的发行信息可能需要在浏览器登录后查看。
+这是 Windows 11 x64 预发行版。见 [1.1.0 更新记录](docs/releases/1.1.0.md)。
+
+在 Codex 插件设置添加随包提供的 [Amifolio 本地插件市场](codex/README.md)，安装插件并信任钩子。打开「作品」，选一个项目开启同步。Codex 完成新回合后，点击「更新作品」查看上传件和交付物。选中作品后可以打开原件、返回来源会话或设为范例。
+
+首屏显示「风格样张」。选择全局或项目，点样张的标题、背景、正文或按钮，在旁边调整选中的设置。点击「保存偏好」后，适用的 Codex 创作任务会使用同一份已启用偏好，即使 Amifolio 窗口已关闭。「查看下次提供内容」显示新会话首次执行相关创作任务时可收到的已保存偏好。风格预览需要 Microsoft Edge WebView2 Runtime。「更多」内可进入会话学习、提供日志和 Codex 原生记忆。原生记忆支持只读查看 v1、v2 文件、来源和最近变化。
+
+在「指令」可切换全局和项目 AGENTS.md，查看实际路径并在保存前核对差异。已发现的项目目录仍可从「设置」打开。旧资料在「设置 → 旧资料」只读保留。
 
 保留整个运行目录，双击 `desktop/Amifolio.exe` 启动，同时保留 `bridge`、`worker` 与 WinUI 资源。本机应用数据默认保存在 `%LOCALAPPDATA%\Amifolio`，与项目目录分开。关闭窗口结束本窗口工作，不安装常驻扫描服务；独立 MCP 连接由宿主管理。
 
@@ -16,10 +22,12 @@ Amifolio 是本机 Codex 的只读辅助工作台：发现真实项目、按原�
 
 数据库 schema5 的引用备份仅保存引用索引与应用自有状态，不备份或恢复项目原文件；会话学习 schema2 同时保留常用、历史和删除保护。遗留历史归档按兼容规则保留，不能替代当前项目备份。恢复引用后需重新核对原路径并显式解析。维护入口限制与人工记忆保留规则见[数据恢复说明](docs/STORAGE-RECOVERY.md)。
 
-文本 PDF、现代 Office、文本与代码支持有界提取和来源定位，不执行 OCR 或公式重算。运行包需要 .NET Desktop Runtime 10 和匹配的 Windows App Runtime，未签名。见[安装、升级与排查](docs/RELEASE.md)。
+文本 PDF、现代 Office、文本与代码支持有界提取和来源定位。免安装包需要 .NET Desktop Runtime 10 和匹配的 Windows App Runtime。包未签名。
 
-界面使用系统已安装的华文宋体。未安装该字体时使用系统字体回退。
+样张使用所选本机字体，未安装时启用系统回退。
 
-本文件复制到运行包根目录，链接相对于解压后的根目录。`PACKAGE-MANIFEST.json` 记录逐文件 SHA-256，旁置 `.sha256.txt` 校验整个 ZIP。源码包与运行包均不得混入用户库、项目原件、凭据、PDB 或本机启动快捷方式。第三方包与许可见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)，PdfPig 许可及附带声明须随包保留。包是否完成核验以旁置哈希及交付回执为准。
+解压前将 `Get-FileHash -Algorithm SHA256 -LiteralPath .\Amifolio-1.1.0-win-x64.zip` 的结果与旁置 `.sha256.txt` 比对。ZIP 内的 `PACKAGE-MANIFEST.json` 记录全部有效载荷路径、字节数、逐文件 SHA-256 和本机原生测试摘要的 SHA-256。有效载荷逐项与原生测试前后核对的记录相符。解压时保留整个目录，包括 `desktop/Assets/StylePreview`、`bridge`、`worker` 和 `codex/marketplace` 内以点开头的清单路径。第三方许可见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
 
-当前自动画像仅接受可核对的完整纯文本用户回合；缺少标识、多模态或未知格式保持待核实。
+旧版用户可按 [Codex 接入材料](codex/README.md) 停用独立 Amifolio MCP 与结束钩子，再启用 1.1 插件。
+
+当前自动画像接受可核对的完整纯文本用户回合。缺少标识、多模态或未知格式保持待核实。

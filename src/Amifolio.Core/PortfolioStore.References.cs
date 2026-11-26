@@ -63,20 +63,35 @@ public sealed partial class PortfolioStore
         if(codexProjects is null) await RefreshCodexProjectsAsync(ct).ConfigureAwait(false);
         path=ArchiveSafety.LocalPath(path);
         var project=CodexProjects.Where(p=>projectId is null||p.Id==projectId).Where(p=>ArchiveSafety.Within(path,p.RootPath)).OrderByDescending(p=>p.RootPath.Length).FirstOrDefault()??throw new IOException("文件不属于已发现的Codex项目。");
-        await Catalog.ValidateFileAsync(project,path,ct).ConfigureAwait(false);
-        var info=new FileInfo(path);if(info.Length>ArchiveSafety.MaxFileBytes)throw new IOException("文件超过256 MiB解析上限。");
-        var id="ref-"+Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(project.Id+"\n"+path.ToUpperInvariant())));
+        var reference=await InspectReferenceAsync(project,path,ct).ConfigureAwait(false);
         return await WriteAsync(db=>
         {
-            var existing=Find(db,"id=$id",("$id",id));
+            var existing=Find(db,"id=$id",("$id",reference.Id));
             if(existing is not null)return new ImportResult(existing,true,[]);
-            using var c=Command(db,"""
-                INSERT INTO artifacts(id,title,original_name,kind,source,project_id,tags,object_name,hash,bytes,created_at,version,extraction_status,preview,logical_key)
-                VALUES($id,$name,$name,$kind,'Codex',$project,'',$path,'',$bytes,$date,1,'未解析','',$id)
-                """,("$id",id),("$name",info.Name),("$kind",TextExtraction.ClassifyName(info.Name)),("$project",project.Id),("$path","ref:"+path),("$bytes",info.Length),("$date",FormatDate(new DateTimeOffset(info.LastWriteTimeUtc))));
-            c.ExecuteNonQuery(); return new ImportResult(Find(db,"id=$id",("$id",id))!,false,[]);
+            InsertReference(db,null,project.Id,reference);
+            return new ImportResult(Find(db,"id=$id",("$id",reference.Id))!,false,[]);
         },ct).ConfigureAwait(false);
     }
+
+    private sealed record ReferenceMetadata(string Id,string Path,string Name,long Bytes,DateTimeOffset Modified);
+
+    private async Task<ReferenceMetadata> InspectReferenceAsync(CodexProject project,string path,CancellationToken ct)
+    {
+        path=await Catalog.ValidateFileAsync(project,path,ct).ConfigureAwait(false);
+        var info=new FileInfo(path);
+        var bytes=info.Length;
+        if(bytes>ArchiveSafety.MaxFileBytes)throw new IOException("文件超过256 MiB解析上限。");
+        var id="ref-"+Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(project.Id+"\n"+path.ToUpperInvariant())));
+        return new(id,path,info.Name,bytes,info.LastWriteTimeUtc);
+    }
+
+    private static void InsertReference(Microsoft.Data.Sqlite.SqliteConnection db,Microsoft.Data.Sqlite.SqliteTransaction? tx,
+        string projectId,ReferenceMetadata item) =>
+        LearningSchema.Exec(db,tx,"""
+            INSERT OR IGNORE INTO artifacts(id,title,original_name,kind,source,project_id,tags,object_name,hash,bytes,created_at,version,extraction_status,preview,logical_key)
+            VALUES($id,$name,$name,$kind,'Codex',$project,'',$path,'',$bytes,$date,1,'未解析','',$id)
+            """,("$id",item.Id),("$name",item.Name),("$kind",TextExtraction.ClassifyName(item.Name)),("$project",projectId),
+            ("$path","ref:"+item.Path),("$bytes",item.Bytes),("$date",FormatDate(item.Modified)));
     public async Task ParseReferenceAsync(string id,CancellationToken ct=default)
     {
         var current=await GetAsync(id,ct).ConfigureAwait(false)??throw new IOException("文件引用不存在。");
@@ -116,6 +131,7 @@ public sealed partial class PortfolioStore
             }
             return item;
         }
+        catch(Exception e)when(e is FileNotFoundException or DirectoryNotFoundException){return item with{Preview="",ExtractionStatus="源文件缺失"};}
         catch(Exception e)when(e is IOException or UnauthorizedAccessException){return item with{Preview="",ExtractionStatus="源文件不可读"};}
     }
 

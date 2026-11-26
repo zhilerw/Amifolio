@@ -1,0 +1,17 @@
+{
+  "name": "amifolio-local",
+  "plugins": [
+    {
+      "name": "amifolio",
+      "source": {
+        "source": "local",
+        "path": "./plugins/amifolio"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

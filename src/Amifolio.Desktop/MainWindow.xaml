@@ -1,8 +1,8 @@
-﻿<Window x:Class="Amifolio.Desktop.MainWindow"
+<Window x:Class="Amifolio.Desktop.MainWindow"
  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
  xmlns:local="using:Amifolio.Desktop"
- Title="Amifolio · Codex辅助">
+ Title="Amifolio">
  <Grid x:Name="Root" Background="#F6F3EC" Loaded="OnLoaded">
   <Grid.RowDefinitions><RowDefinition Height="38" /><RowDefinition Height="*" /></Grid.RowDefinitions>
   <Border Grid.Row="0" BorderBrush="{StaticResource Line}" BorderThickness="0,0,0,1" Background="{StaticResource Paper}">
@@ -14,20 +14,15 @@
    </Grid>
   </Border>
   <Grid Grid.Row="1">
-   <Grid.ColumnDefinitions><ColumnDefinition Width="208" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+   <Grid.ColumnDefinitions><ColumnDefinition x:Name="NavigationColumn" Width="110" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
    <Border Background="#EFECE4" BorderBrush="{StaticResource Line}" BorderThickness="0,0,1,0">
     <Grid Padding="12,20,12,12" RowSpacing="16">
      <Grid.RowDefinitions><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
      <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
       <StackPanel Spacing="4">
-       <TextBlock Text="作品集" Foreground="{StaticResource Accent}" FontSize="12" Margin="16,0,0,8" />
-       <Button x:Name="LibraryNav" Style="{StaticResource NavButton}" Tag="library" Click="Navigate"><StackPanel Orientation="Horizontal" Spacing="12"><FontIcon Glyph="&#xE8F1;" FontSize="16" Foreground="{Binding Foreground, ElementName=LibraryNav}" /><TextBlock Text="作品" Foreground="{Binding Foreground, ElementName=LibraryNav}" /></StackPanel></Button>
-       <Button x:Name="ProjectsNav" Style="{StaticResource NavButton}" Tag="projects" Click="Navigate"><StackPanel Orientation="Horizontal" Spacing="12"><FontIcon Glyph="&#xE8B7;" FontSize="16" Foreground="{Binding Foreground, ElementName=ProjectsNav}" /><TextBlock Text="项目" Foreground="{Binding Foreground, ElementName=ProjectsNav}" /></StackPanel></Button>
-       <TextBlock Text="AI" Foreground="{StaticResource Accent}" FontSize="12" Margin="16,22,0,8" />
-       <Button x:Name="ContextNav" Style="{StaticResource NavButton}" Tag="context" Click="Navigate"><StackPanel Orientation="Horizontal" Spacing="12"><FontIcon Glyph="&#xE70B;" FontSize="16" Foreground="{Binding Foreground, ElementName=ContextNav}" /><TextBlock Text="风格与记忆" Foreground="{Binding Foreground, ElementName=ContextNav}" /></StackPanel></Button>
-       <Button x:Name="HelpNav" Style="{StaticResource NavButton}" Tag="help" Click="Navigate"><StackPanel Orientation="Horizontal" Spacing="12"><Viewbox Width="16" Height="16"><Path Width="16" Height="16" Stroke="{Binding Foreground, ElementName=HelpNav}" StrokeThickness="1.2" Data="M4,4 L12,4 L12,12 L4,12 Z M6,6 L10,6 L10,10 L6,10 Z M6,1 L6,4 M10,1 L10,4 M6,12 L6,15 M10,12 L10,15 M1,6 L4,6 M1,10 L4,10 M12,6 L15,6 M12,10 L15,10" /></Viewbox><TextBlock Text="AI 配置" Foreground="{Binding Foreground, ElementName=HelpNav}" /></StackPanel></Button>
-       <Button x:Name="AgentsNav" Style="{StaticResource NavButton}" Tag="agents" Click="Navigate"><StackPanel Orientation="Horizontal" Spacing="12"><FontIcon Glyph="&#xE943;" FontSize="16" Foreground="{Binding Foreground, ElementName=AgentsNav}" /><TextBlock Text="本机自定义指令" Foreground="{Binding Foreground, ElementName=AgentsNav}" /></StackPanel></Button>
-       <Button x:Name="ConnectionsNav" Style="{StaticResource NavButton}" Tag="connections" Click="Navigate"><StackPanel Orientation="Horizontal" Spacing="12"><FontIcon Glyph="&#xE71B;" FontSize="16" Foreground="{Binding Foreground, ElementName=ConnectionsNav}" /><TextBlock Text="环境配置" Foreground="{Binding Foreground, ElementName=ConnectionsNav}" /><Ellipse x:Name="EnvironmentBadge" Width="6" Height="6" Fill="{StaticResource Accent}" VerticalAlignment="Center" ToolTipService.ToolTip="请先检查环境配置" /></StackPanel></Button>
+       <Button x:Name="LibraryNav" Style="{StaticResource NavButton}" Tag="works" Click="Navigate" ToolTipService.ToolTip="作品" AutomationProperties.Name="作品"><StackPanel Orientation="Horizontal" Spacing="9"><FontIcon Glyph="&#xE8F1;" FontSize="16" Foreground="{Binding Foreground, ElementName=LibraryNav}" /><TextBlock x:Name="LibraryNavLabel" Text="作品" Foreground="{Binding Foreground, ElementName=LibraryNav}" /></StackPanel></Button>
+       <Button x:Name="ContextNav" Style="{StaticResource NavButton}" Tag="creative" Click="Navigate" ToolTipService.ToolTip="偏好" AutomationProperties.Name="偏好"><StackPanel Orientation="Horizontal" Spacing="9"><FontIcon Glyph="&#xE70B;" FontSize="16" Foreground="{Binding Foreground, ElementName=ContextNav}" /><TextBlock x:Name="ContextNavLabel" Text="偏好" Foreground="{Binding Foreground, ElementName=ContextNav}" /></StackPanel></Button>
+       <Button x:Name="AgentsNav" Style="{StaticResource NavButton}" Tag="agents" Click="Navigate" ToolTipService.ToolTip="指令" AutomationProperties.Name="指令"><StackPanel Orientation="Horizontal" Spacing="9"><FontIcon Glyph="&#xE943;" FontSize="16" Foreground="{Binding Foreground, ElementName=AgentsNav}" /><TextBlock x:Name="AgentsNavLabel" Text="指令" Foreground="{Binding Foreground, ElementName=AgentsNav}" /></StackPanel></Button>
       </StackPanel>
      </ScrollViewer>
      <Button x:Name="SettingsNav" Grid.Row="1" Style="{StaticResource NavButton}" Tag="settings" Click="Navigate" Width="40" Height="40" Padding="9,8,8,8" HorizontalAlignment="Left" HorizontalContentAlignment="Center" ToolTipService.ToolTip="设置" AutomationProperties.Name="设置"><FontIcon Glyph="&#xE713;" FontSize="16" Foreground="{Binding Foreground, ElementName=SettingsNav}" /></Button>
@@ -35,11 +30,79 @@
    </Border>
    <Grid Grid.Column="1">
     <local:LearningView x:Name="LearningPage" Visibility="Collapsed"/>
-    <Grid x:Name="LibraryPage">
+    <Grid x:Name="WorksHomePage" />
+    <Grid x:Name="CreativePage" Visibility="Collapsed" Padding="24,18" RowSpacing="10">
+     <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/>
+     </Grid.RowDefinitions>
+     <Grid ColumnSpacing="12">
+      <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+      <TextBlock Text="偏好" Style="{StaticResource PageHeading}" VerticalAlignment="Center"/>
+      <Button Grid.Column="1" Content="更多" AutomationProperties.Name="更多偏好设置">
+       <Button.Flyout><MenuFlyout>
+        <MenuFlyoutItem Text="会话学习与候选" Click="OpenCreativeLearning"/>
+        <MenuFlyoutItem Text="提供日志" Click="OpenCreativeLearningLogs"/>
+        <MenuFlyoutItem Text="Codex 原生记忆" Click="BrowseNativeMemory"/>
+        <MenuFlyoutSeparator/>
+        <MenuFlyoutItem Text="重新读取偏好" Click="ReloadCreativePage"/>
+        <MenuFlyoutItem Text="插件设置" Tag="connections" Click="Navigate"/>
+       </MenuFlyout></Button.Flyout>
+      </Button>
+     </Grid>
+     <Grid Grid.Row="1" ColumnSpacing="10" MaxWidth="370" HorizontalAlignment="Left">
+      <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+      <ComboBox x:Name="CreativeScope" HorizontalAlignment="Stretch" MinWidth="140" DisplayMemberPath="Name"
+                AutomationProperties.Name="偏好作用域" SelectionChanged="CreativeScopeChanged"/>
+      <Button Grid.Column="1" x:Name="CreativeToggle" Content="启用" Click="ToggleCreative" IsEnabled="False"/>
+     </Grid>
+     <Grid Grid.Row="2" x:Name="CreativePreviewFrame" Background="{StaticResource Paper}" CornerRadius="14">
+      <TextBlock x:Name="CreativePreviewNotice" Text="正在打开风格预览…" TextWrapping="Wrap" Margin="20" />
+     </Grid>
+     <StackPanel Grid.Row="3" Spacing="6">
+      <TextBlock x:Name="CreativeStatus" Text="正在读取偏好…" Style="{StaticResource Caption}" TextWrapping="Wrap"
+                 AutomationProperties.LiveSetting="Polite"/>
+      <StackPanel Orientation="Horizontal" Spacing="8">
+       <Button x:Name="CreativeSave" Content="保存偏好" Click="SaveCreativePage" IsEnabled="False" Background="{StaticResource Accent}" Foreground="White"/>
+       <Button x:Name="CreativeUndo" Content="撤销" Click="UndoCreativePage" IsEnabled="False"/>
+      </StackPanel>
+     </StackPanel>
+    </Grid>
+    <Grid x:Name="NativeMemoryPage" Visibility="Collapsed" Padding="24,16,24,22" RowSpacing="10">
+     <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/>
+     </Grid.RowDefinitions>
+     <StackPanel Spacing="8">
+      <HyperlinkButton Content="返回偏好" Tag="creative" Click="Navigate" Padding="0,0,8,0"/>
+      <TextBlock Text="Codex 原生记忆" Style="{StaticResource PageHeading}" AutomationProperties.HeadingLevel="Level1"/>
+     </StackPanel>
+     <TextBlock x:Name="NativeMemoryStatus" Grid.Row="1" Style="{StaticResource Caption}" TextWrapping="Wrap"
+                AutomationProperties.LiveSetting="Polite"/>
+     <Grid Grid.Row="2" ColumnSpacing="8" RowSpacing="6">
+      <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+      <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+      <ComboBox x:Name="NativeMemoryScope" Grid.Row="0" Grid.ColumnSpan="2" Header="查看范围"
+                DisplayMemberPath="Name" HorizontalAlignment="Left" MaxWidth="420" MinWidth="160"
+                SelectionChanged="NativeMemoryScopeChanged"/>
+      <ComboBox x:Name="NativeMemoryFiles" Grid.Row="1" Header="记忆文件和来源"
+                DisplayMemberPath="Label" HorizontalAlignment="Stretch" MinWidth="0"
+                SelectionChanged="NativeMemoryFileChanged"/>
+      <Button x:Name="NativeMemoryRefresh" Grid.Row="1" Grid.Column="1" VerticalAlignment="Bottom"
+              Content="刷新" Click="RefreshNativeMemory"/>
+     </Grid>
+     <Grid Grid.Row="3" RowSpacing="6">
+      <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+      <TextBlock x:Name="NativeMemoryFileInfo" TextWrapping="Wrap" Style="{StaticResource Caption}"
+                 IsTextSelectionEnabled="True"/>
+      <TextBox x:Name="NativeMemoryText" Grid.Row="1" IsReadOnly="True" AcceptsReturn="True"
+               TextWrapping="Wrap" FontSize="14" VerticalContentAlignment="Top" MinWidth="0"
+               AutomationProperties.Name="记忆内容" ScrollViewer.VerticalScrollBarVisibility="Auto"/>
+     </Grid>
+    </Grid>
+    <Grid x:Name="LibraryPage" Visibility="Collapsed">
      <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="260" /></Grid.ColumnDefinitions>
      <Grid Padding="28,26,22,20" RowSpacing="12">
       <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
-      <Grid><StackPanel Spacing="5"><TextBlock x:Name="LibraryHeading" Text="作品" Style="{StaticResource PageHeading}"/><StackPanel Orientation="Horizontal" Spacing="8"><TextBlock x:Name="ScanStatus" Text="尚未扫描" Style="{StaticResource Caption}" VerticalAlignment="Center"/><Button x:Name="ScanRetryButton" Content="重新扫描" Padding="7,3" Click="RetryScan"/></StackPanel></StackPanel><StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right" VerticalAlignment="Center"><Button x:Name="ScanButton" Content="扫描" Click="ShowCollectionActions"/><Button x:Name="ParseSelectedButton" Content="解析所选" Click="ParseSelectedFiles" Background="{StaticResource Accent}" Foreground="White"/></StackPanel></Grid>
+      <Grid><StackPanel Spacing="5"><TextBlock x:Name="LibraryHeading" Text="作品" Style="{StaticResource PageHeading}"/><StackPanel Orientation="Horizontal" Spacing="8"><TextBlock x:Name="ScanStatus" Text="尚未扫描" Style="{StaticResource Caption}" VerticalAlignment="Center"/><Button x:Name="ScanRetryButton" Content="重新扫描" Padding="7,3" Click="RetryScan"/></StackPanel></StackPanel><StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right" VerticalAlignment="Center"><Button Content="Codex 作品" Click="ShowCodexWorks"/><Button x:Name="ScanButton" Content="扫描" Click="ShowCollectionActions"/><Button x:Name="ParseSelectedButton" Content="解析所选" Click="ParseSelectedFiles" Background="{StaticResource Accent}" Foreground="White"/></StackPanel></Grid>
       <Grid Grid.Row="1" ColumnSpacing="6"><Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
        <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
         <Button x:Name="BrowserBackButton" Style="{StaticResource BrowserNavigationButton}" Click="BrowserBack" IsEnabled="False" ToolTipService.ToolTip="返回 (Alt+左键 / Backspace / 鼠标侧键1)" AutomationProperties.Name="返回">
@@ -65,7 +128,7 @@
        <StackPanel x:Name="EmptyLibrary" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="10"><FontIcon Glyph="&#xE8B7;" FontSize="32" Foreground="{StaticResource Accent}"/><TextBlock x:Name="EmptyTitle" Text="尚未发现Codex项目" FontSize="18" HorizontalAlignment="Center"/><TextBlock x:Name="EmptyHint" Text="点击扫描，读取本机Codex项目。" Style="{StaticResource Caption}" TextWrapping="Wrap" MaxWidth="280" TextAlignment="Center"/></StackPanel>
       </Grid>
      </Grid>
-     <Border Grid.Column="1" BorderBrush="{StaticResource Line}" BorderThickness="1,0,0,0" Background="{StaticResource Paper}" Padding="20,28"><ScrollViewer><StackPanel x:Name="DetailContent" Spacing="16"><TextBlock Text="文件详情" Foreground="{StaticResource Accent}" FontSize="13"/><TextBlock x:Name="DetailTitle" Text="未选择文件" FontSize="20" TextWrapping="Wrap"/><TextBlock x:Name="DetailMetadata" Style="{StaticResource Caption}" TextWrapping="Wrap" IsTextSelectionEnabled="True"/><Border x:Name="DetailDivider" Height="1" Background="{StaticResource Line}" Visibility="Collapsed"/><TextBlock x:Name="DetailPreviewHeading" Text="内容片段" FontSize="14" Visibility="Collapsed"/><TextBlock x:Name="DetailPreview" TextWrapping="Wrap" FontSize="12" Foreground="{StaticResource Muted}" IsTextSelectionEnabled="True"/><StackPanel x:Name="DetailActions" Spacing="9" Visibility="Collapsed"><Button Content="解析文件" Click="ParseSelectedFiles" HorizontalAlignment="Stretch"/><Button Content="在文件夹中显示" Click="RevealArtifact" HorizontalAlignment="Stretch"/></StackPanel></StackPanel></ScrollViewer></Border>
+     <Border Grid.Column="1" BorderBrush="{StaticResource Line}" BorderThickness="1,0,0,0" Background="{StaticResource Paper}" Padding="20,28"><ScrollViewer><StackPanel x:Name="DetailContent" Spacing="16"><TextBlock Text="文件详情" Foreground="{StaticResource Accent}" FontSize="13"/><TextBlock x:Name="DetailTitle" Text="未选择文件" FontSize="20" TextWrapping="Wrap"/><TextBlock x:Name="DetailMetadata" Style="{StaticResource Caption}" TextWrapping="Wrap" IsTextSelectionEnabled="True"/><Border x:Name="DetailDivider" Height="1" Background="{StaticResource Line}" Visibility="Collapsed"/><TextBlock x:Name="DetailPreviewHeading" Text="内容片段" FontSize="14" Visibility="Collapsed"/><TextBlock x:Name="DetailPreview" TextWrapping="Wrap" FontSize="12" Foreground="{StaticResource Muted}" IsTextSelectionEnabled="True"/><StackPanel x:Name="DetailActions" Spacing="9" Visibility="Collapsed"><Button Content="解析文件" Click="ParseSelectedFiles" HorizontalAlignment="Stretch"/><Button Content="在文件夹中显示" Click="RevealArtifact" HorizontalAlignment="Stretch"/><Button Content="用作范例" Click="UseSelectedAsExample" HorizontalAlignment="Stretch"/></StackPanel></StackPanel></ScrollViewer></Border>
     </Grid>
     <Grid x:Name="ProjectsPage" Visibility="Collapsed" Padding="32,28" RowSpacing="16">
      <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
@@ -103,7 +166,7 @@
     </Grid>
     <Grid x:Name="HelpPage" Visibility="Collapsed"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions><TextBlock Text="AI 配置" Style="{StaticResource PageHeading}" Margin="32,28,32,8"/><ScrollViewer Grid.Row="1">
      <StackPanel Padding="32,8,32,28" Spacing="14" MaxWidth="930" HorizontalAlignment="Left">
-      
+
       <Border Background="{StaticResource AccentTint}" BorderBrush="{StaticResource Line}" BorderThickness="1" CornerRadius="5" Padding="20">
        <StackPanel Spacing="16" MinWidth="400">
         <TextBlock Text="模型设置" FontSize="20" />
@@ -118,20 +181,75 @@
       </Border>
      </StackPanel>
     </ScrollViewer></Grid>
-    <Grid x:Name="AgentsPage" Visibility="Collapsed" Padding="32,28">
-     <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
-     <TextBlock Text="本机自定义指令" Style="{StaticResource PageHeading}" />
-     <Grid Grid.Row="1" ColumnSpacing="12" Margin="0,6,0,12"><Grid.ColumnDefinitions><ColumnDefinition Width="200" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><ComboBox x:Name="AgentsScope" DisplayMemberPath="Name" HorizontalAlignment="Stretch" SelectionChanged="AgentsScopeChanged" /><TextBox x:Name="AgentsPath" Grid.Column="1" PlaceholderText="AGENTS.md 绝对路径" /><Button Grid.Column="2" Content="读取" Click="ReadAgents" /></Grid>
-     <TextBlock Grid.Row="2" Text="查看和修改 AGENTS.md；保存前预览差异并自动备份。" Style="{StaticResource Caption}" Margin="0,0,0,12" />
-     <TextBox x:Name="AgentsEditor" Grid.Row="3" IsReadOnly="True" AcceptsReturn="True" TextWrapping="NoWrap" FontFamily="{StaticResource AppFontFamily}" FontSize="13" VerticalContentAlignment="Top" ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Auto" />
-     <StackPanel Grid.Row="4" Spacing="12" Margin="0,14,0,0"><TextBlock x:Name="AgentsStatus" Style="{StaticResource Caption}" Text="未读取文件" /><StackPanel Orientation="Horizontal" Spacing="10"><Button x:Name="AgentsEditButton" Content="修改" Click="ToggleAgentsEdit" Background="{StaticResource Accent}" Foreground="White" /><Button x:Name="AgentsCancelButton" Content="取消" Click="CancelAgentsEdit" Visibility="Collapsed" /><Button x:Name="PrepareAgentsButton" Content="更新上下文入口" Click="PrepareAgents" IsEnabled="False" /><Button Content="一键配置入口" Click="DeployAgentsEntry" /><Button x:Name="UndoAgentsButton" Content="撤销上次保存" Click="UndoAgents" IsEnabled="False" /></StackPanel></StackPanel>
+    <Grid x:Name="AgentsPage" Visibility="Collapsed">
+     <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+      <StackPanel Padding="24,16,24,28" Spacing="16" MaxWidth="920" HorizontalAlignment="Stretch">
+       <TextBlock Text="指令" Style="{StaticResource PageHeading}" AutomationProperties.HeadingLevel="Level1" />
+
+       <Grid ColumnSpacing="10">
+        <Grid.ColumnDefinitions>
+         <ColumnDefinition Width="*" />
+         <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+        <ComboBox x:Name="AgentsScope" Header="作用范围" DisplayMemberPath="Name"
+                  HorizontalAlignment="Stretch" MinWidth="0" SelectionChanged="AgentsScopeChanged" />
+        <Button x:Name="AgentsActionsButton" Grid.Column="1" Content="更多操作" VerticalAlignment="Bottom">
+         <Button.Flyout>
+          <Flyout Placement="BottomEdgeAlignedRight">
+           <StackPanel Spacing="8" MaxWidth="360">
+            <TextBox x:Name="AgentsPath" Header="自定义文件路径" PlaceholderText="AGENTS.md 绝对路径"
+                     MinWidth="0" HorizontalAlignment="Stretch" TextChanged="AgentsPathChanged" />
+            <Button Content="读取指定路径" Click="ReadAgents" />
+            <Border Height="1" Background="{StaticResource Line}" Margin="0,4" />
+            <Button x:Name="PrepareAgentsButton" Content="在草稿中更新入口" Click="PrepareAgents"
+                    IsEnabled="False" />
+            <Button Content="配置范围默认文件的入口" Click="DeployAgentsFromPage"
+                    AutomationProperties.HelpText="确认前会显示所选范围默认文件的路径和差异。" />
+            <Button x:Name="UndoAgentsButton" Content="撤销上次保存" Click="UndoAgents" IsEnabled="False" />
+           </StackPanel>
+          </Flyout>
+         </Button.Flyout>
+        </Button>
+       </Grid>
+
+       <Border Background="{StaticResource AccentTint}" CornerRadius="5" Padding="14,11">
+        <StackPanel Spacing="5">
+         <TextBlock Text="目标文件" Style="{StaticResource Caption}" />
+         <TextBlock x:Name="AgentsTargetPath" Text="尚未选择文件"
+                    FontFamily="{StaticResource AppFontFamily}" TextWrapping="Wrap"
+                    IsTextSelectionEnabled="True" />
+         <TextBlock x:Name="AgentsStatus" Style="{StaticResource Caption}" Text="尚未读取文件"
+                    AutomationProperties.LiveSetting="Polite" />
+         <Button x:Name="AgentsConflictButton" Content="对照磁盘版本" Click="ReviewAgentsConflict"
+                 Visibility="Collapsed" Margin="0,3,0,0" />
+        </StackPanel>
+       </Border>
+
+       <StackPanel Orientation="Horizontal" Spacing="8">
+        <Button x:Name="AgentsEditButton" Content="编辑" Click="ToggleAgentsEdit" IsEnabled="False"
+                Background="{StaticResource Accent}" Foreground="White" />
+        <Button x:Name="AgentsCancelButton" Content="取消" Click="CancelAgentsEdit" Visibility="Collapsed" />
+       </StackPanel>
+       <TextBox x:Name="AgentsEditor" Header="AGENTS.md 内容" IsReadOnly="True" AcceptsReturn="True"
+                Height="340" MinWidth="0" TextWrapping="Wrap" FontFamily="{StaticResource AppFontFamily}"
+                FontSize="14" VerticalContentAlignment="Top"
+                ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Disabled" />
+      </StackPanel>
+     </ScrollViewer>
     </Grid>
     <Grid x:Name="ConnectionsPage" Visibility="Collapsed"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions><TextBlock Text="环境配置" Style="{StaticResource PageHeading}" Margin="32,28,32,8"/><ScrollViewer Grid.Row="1"><StackPanel Padding="32,8,32,28" Spacing="20" MaxWidth="940" HorizontalAlignment="Left">
-     
+
      <Border Background="{StaticResource AccentTint}" BorderBrush="{StaticResource Line}" BorderThickness="1" CornerRadius="5" Padding="20"><StackPanel Spacing="10"><StackPanel Orientation="Horizontal" Spacing="12"><TextBlock Text="本机环境检查" FontSize="20" Foreground="{StaticResource Accent}"/><Button Content="重新检测" Click="InspectEnvironment"/></StackPanel><TextBlock x:Name="EnvironmentSummary" Text="尚未检测" Style="{StaticResource Caption}"/><ItemsControl x:Name="EnvironmentChecks"><ItemsControl.ItemTemplate><DataTemplate><StackPanel Spacing="3" Margin="0,4"><TextBlock Text="{Binding Name}"/><TextBlock Text="{Binding Detail}" Style="{StaticResource Caption}" TextWrapping="Wrap"/></StackPanel></DataTemplate></ItemsControl.ItemTemplate></ItemsControl></StackPanel></Border>
      <ComboBox x:Name="AgentTarget" Header="Agent" SelectedIndex="0" MinWidth="220"><x:String>Codex</x:String></ComboBox>
+     <Border Background="{StaticResource Paper}" BorderBrush="{StaticResource Line}" BorderThickness="1" CornerRadius="5" Padding="20">
+      <StackPanel Spacing="8">
+       <TextBlock Text="Amifolio 插件" FontSize="20" Foreground="{StaticResource Accent}" />
+       <TextBlock Text="从 Codex 的插件页安装 Amifolio。插件包含作品同步和创作偏好所需的组件。" TextWrapping="Wrap" />
+       <Button Content="查看安装方法" Click="ShowNativePluginSetup" />
+      </StackPanel>
+     </Border>
      <Border Background="{StaticResource AccentTint}" BorderBrush="{StaticResource Line}" BorderThickness="1" CornerRadius="5" Padding="20"><StackPanel Spacing="12">
-      <TextBlock Text="1. 添加 MCP 连接" FontSize="20" Foreground="{StaticResource Accent}" />
+      <TextBlock Text="旧版 MCP 接入" FontSize="20" Foreground="{StaticResource Accent}" />
       <TextBlock x:Name="CodexConfigPath" Style="{StaticResource Caption}" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
       <TextBlock x:Name="BridgeCommand" FontFamily="{StaticResource AppFontFamily}" FontSize="12" TextWrapping="Wrap" IsTextSelectionEnabled="True" MaxWidth="660" />
       <StackPanel Orientation="Horizontal" Spacing="8"><Button Content="查看配置" Click="ViewCodexConfig" /><Button Content="打开 config.toml" Click="OpenCodexConfig" /><Button Content="一键写入" Click="InstallMcp" Background="{StaticResource Accent}" Foreground="White" /></StackPanel>
@@ -139,7 +257,7 @@
       <TextBlock Text="写入后请手动退出并重新打开 Codex。此连接可访问本机作品库。" Style="{StaticResource Caption}" TextWrapping="Wrap" />
      </StackPanel></Border>
      <Border Background="{StaticResource Paper}" BorderBrush="{StaticResource Line}" BorderThickness="1" CornerRadius="5" Padding="20"><StackPanel Spacing="12">
-      <TextBlock Text="2. 安装配套 skills" FontSize="20" Foreground="{StaticResource Accent}" />
+      <TextBlock Text="旧版独立 skills" FontSize="20" Foreground="{StaticResource Accent}" />
       <TextBlock x:Name="CodexSkillPath" Style="{StaticResource Caption}" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
       <StackPanel Orientation="Horizontal" Spacing="8"><Button Content="下载 skills 包" Click="DownloadSkill" /><Button Content="复制安装提示词" Click="CopySkillPrompt" /><Button Content="一键安装" Click="InstallSkill" /></StackPanel>
       <TextBlock Text="安装仅复制随包 skills，无需 API Key。" Style="{StaticResource Caption}" />
@@ -159,19 +277,24 @@
      <ListView x:Name="TaskList" Grid.Row="1" SelectionChanged="TaskSelectionChanged" HorizontalContentAlignment="Stretch">
       <ListView.ItemTemplate><DataTemplate><Grid Padding="12" RowSpacing="5"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><StackPanel Spacing="5"><TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis"/><TextBlock Text="{Binding Detail}" Style="{StaticResource Caption}" TextWrapping="Wrap"/></StackPanel><TextBlock Grid.Column="1" Text="{Binding State}" Foreground="{StaticResource Accent}" Margin="14,0,0,0"/></Grid></DataTemplate></ListView.ItemTemplate>
      </ListView>
-     
+
      <TextBlock x:Name="TaskDetail" Grid.Row="2" Style="{StaticResource Caption}" TextWrapping="Wrap" Text="最近 200 项。关闭应用会停止当前处理，原件保留。"/>
      <StackPanel Grid.Row="3" Orientation="Horizontal" Spacing="10"><TextBlock x:Name="ScanLog" Style="{StaticResource Caption}" TextWrapping="Wrap" Text="尚未扫描" VerticalAlignment="Center"/><Button Content="重新扫描" Click="RetryScan"/><Button x:Name="RetryTaskButton" Content="重试" Click="RetryTask" IsEnabled="False" Background="{StaticResource Accent}" Foreground="White"/><Button x:Name="CancelTaskButton" Content="取消任务" Click="CancelTask" IsEnabled="False"/></StackPanel>
     </Grid>
     <Grid x:Name="SettingsPage" Visibility="Collapsed"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions><TextBlock Text="设置" Style="{StaticResource PageHeading}" Margin="32,28,32,8"/><ScrollViewer Grid.Row="1"><StackPanel Padding="32,8,32,28" Spacing="20" MaxWidth="900" HorizontalAlignment="Left">
-     
-     <Button Content="日志" Click="OpenLogs" HorizontalAlignment="Left"/><Border Height="1" Background="{StaticResource Line}" />
+
+     <StackPanel Spacing="8">
+      <Button Tag="connections" Click="Navigate"><StackPanel Orientation="Horizontal" Spacing="8"><TextBlock Text="Codex 插件与环境"/><Ellipse x:Name="EnvironmentBadge" Width="6" Height="6" VerticalAlignment="Center" Fill="{StaticResource Accent}"/></StackPanel></Button>
+      <Button Content="模型配置" Tag="help" Click="Navigate"/>
+      <Button Content="项目目录" Tag="library" Click="Navigate"/>
+      <Button Content="日志" Click="OpenLogs"/>
+     </StackPanel><Border Height="1" Background="{StaticResource Line}" />
      <TextBlock Text="本机资料" FontSize="20" Foreground="{StaticResource Accent}" /><TextBlock x:Name="StoragePath" TextWrapping="Wrap" IsTextSelectionEnabled="True" /><TextBlock Text="保存目录索引、会话学习和配置。项目文件只读。" Style="{StaticResource Caption}" />
      <TextBlock x:Name="StorageStatusText" Text="正在检查数据目录" TextWrapping="Wrap" Style="{StaticResource Caption}" />
      <StackPanel Orientation="Horizontal" Spacing="8"><Button Content="打开数据目录" Click="OpenStorage"/><Button x:Name="HistoryButton" Content="旧资料" Click="OpenLegacyHistory"/><Button Content="检查目录" Click="RetryLegacyMigration"/></StackPanel>
      <Border Height="1" Background="{StaticResource Line}" />
-     <TextBlock Text="版本更新" FontSize="20" Foreground="{StaticResource Accent}" /><TextBlock x:Name="InstalledVersionText" />
-     <TextBlock x:Name="ReleaseStatusText" Text="尚未检查更新。" Style="{StaticResource Caption}" TextWrapping="Wrap" />
+     <TextBlock Text="版本更新" FontSize="20" Foreground="{StaticResource Accent}" /><TextBlock Text="{x:Bind ReleaseVersion, Mode=OneTime}" />
+     <TextBlock x:Name="ReleaseStatusText" Text="仓库目前私有。检查结果可能受访问权限影响。" Style="{StaticResource Caption}" TextWrapping="Wrap" />
      <StackPanel Orientation="Horizontal" Spacing="8"><Button x:Name="CheckUpdatesButton" Content="检查更新" Click="CheckRelease"/><Button x:Name="ReleasePageButton" Content="下载页面" Click="OpenReleasePage"/></StackPanel>
     </StackPanel></ScrollViewer></Grid>
    </Grid>

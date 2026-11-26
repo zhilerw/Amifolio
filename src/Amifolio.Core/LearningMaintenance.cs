@@ -82,7 +82,7 @@ internal static partial class LearningMaintenance
                     ClearDeleted(profile); UpdatePayload(db, tx, "profiles", id, profile);
                     Exec(db, tx, "DELETE FROM history WHERE entry_id=$id", ("$id", id));
                 }
-                else if (!Manual(profile) && state == "active")
+                else if ((!Manual(profile) || Value<string>(profile, "kind") == "creative") && state == "active")
                 {
                     profile["state"] = "disabled"; profile["reason"] = "restored"; profile["revision"] = NextRevision(profile);
                     UpdatePayload(db, tx, "profiles", id, profile);

@@ -89,6 +89,36 @@ internal static class LearningRecoveryCases
             Check(Payload(db, "profiles", "candidate")["state"]!.GetValue<string>() == "candidate", "candidate promoted/lost");
             Check(Payload(db, "profiles", "deleted")["state"]!.GetValue<string>() == "deleted" && Scalar(db, "SELECT COUNT(*) FROM suppressions WHERE id='archived-suppression'") == "1", "archived rejection/tombstone lost");
         }),
+        ("learning recovery deduplicates equivalent undo history and preserves distinct same-revision entries", async f =>
+        {
+            const string archived = """{"id":"manual","revision":3,"text":"合成 +","manual":true,"details":{"branch":"archive","order":[1,2]}}""";
+            const string equivalent = """{"details":{"order":[1,2],"branch":"archive"},"manual":true,"text":"合成 \u002B","revision":3,"id":"manual"}""";
+            const string distinct = """{"id":"manual","revision":3,"text":"合成 +","manual":true,"details":{"branch":"live","order":[1,2]}}""";
+            await f.Store.InitializeAsync();
+            using (var seed = Seed(f.DataRoot))
+            {
+                Exec(seed, "DELETE FROM history WHERE entry_id='manual'");
+                Exec(seed, "INSERT INTO history(entry_id,payload) VALUES('manual',$payload)", ("$payload", archived));
+            }
+            var zip = Path.Combine(f.Root, "undo-history.zip");
+            await new PortfolioMaintenance(f.DataRoot).BackupAsync(zip);
+            using (var current = Open(f.DataRoot))
+            {
+                Exec(current, "DELETE FROM history WHERE entry_id='manual'");
+                Exec(current, "INSERT INTO history(entry_id,payload) VALUES('manual',$same),('manual',$same),('manual',$distinct)",
+                    ("$same", equivalent), ("$distinct", distinct));
+            }
+            for (var attempt = 1; attempt <= 2; attempt++)
+            {
+                await new PortfolioMaintenance(f.DataRoot).RestoreAsync(zip);
+                using var restored = Open(f.DataRoot);
+                var branches = Scalar(restored, """
+                    SELECT group_concat(json_extract(payload,'$.details.branch'),',')
+                    FROM (SELECT payload FROM history WHERE entry_id='manual' ORDER BY seq)
+                    """);
+                Check(branches == "archive,live", $"restore {attempt} must keep each distinct same-revision entry once, got {branches}");
+            }
+        }),
         ("learning recovery old backup cannot revive current deletions including manual entries", async f =>
         {
             await f.Store.InitializeAsync(); using (var seed = Seed(f.DataRoot)) { }

@@ -55,16 +55,6 @@ internal static class Stage3Cases
                 first.Kill();await first.WaitForExitAsync();await tasks.RecoverAsync();Check((await tasks.GetAsync(id))?.State=="queued","orphan did not recover");
             }finally{if(!first.HasExited){first.Kill(true);await first.WaitForExitAsync();}}
         }),
-        ("stage3 recovery rechecks a briefly busy orphan lock",async f=>{
-            var artifact=(await f.Store.ImportFileAsync(f.File("recover.md","orphan"))).Artifact;
-            var tasks=new TaskStore(f.DataRoot);var id=await tasks.EnqueueExtractionAsync(artifact.Id);
-            using var owner=await tasks.TryClaimAsync(id);Check(owner is not null,"claim missing");
-            await tasks.RecoverAsync();Check((await tasks.GetAsync(id))?.State=="running","active claim was reclaimed");
-            StorageFaults.Handler.Value=step=>{if(step=="task-recovery-lock-busy")owner!.Dispose();};
-            try { await tasks.RecoverAsync(); }
-            finally { StorageFaults.Handler.Value=null; }
-            Check((await tasks.GetAsync(id))?.State=="queued","briefly busy orphan remained running");
-        }),
         ("stage3 parser exits when only its parent is killed",async f=>{
             var source=f.File("parent.md","owned child");var marker=Path.Combine(f.Root,"child-pid");using var parent=Start("--parent-worker",f.DataRoot,source,marker);Process? child=null;
             try{await Marker(parent,marker);child=Process.GetProcessById(int.Parse(await System.IO.File.ReadAllTextAsync(marker)));parent.Kill();await parent.WaitForExitAsync();await child.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(5));Check(child.HasExited,"parser remained after parent exit");}

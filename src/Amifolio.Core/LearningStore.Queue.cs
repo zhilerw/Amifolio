@@ -9,12 +9,21 @@ public sealed partial class LearningStore
         Text(id,128);Text(token,128);var job=LoadJob(db,id)??throw new InvalidOperationException("整合任务不存在。");
         if(job.Token!=token)throw new InvalidOperationException("任务租约不匹配。");return job;
     },ct);
-    public Task<LearningJob?> ClaimAsync(string projectId,string mode,bool force=false,CancellationToken ct=default)=>UseAsync<LearningJob?>(db=>
+    public Task<LearningJob?> ClaimAsync(string projectId,string mode,bool force=false,CancellationToken ct=default) =>
+        ClaimBatchAsync(projectId,mode,force,null,null,ct);
+
+    public Task<LearningJob?> ClaimExplicitTurnAsync(string projectId,long receipt,long policyRevision,CancellationToken ct=default) =>
+        ClaimBatchAsync(projectId,"chat",true,receipt,policyRevision,ct);
+
+    private Task<LearningJob?> ClaimBatchAsync(string projectId,string mode,bool force,long? receipt,long? revision,CancellationToken ct)=>UseAsync<LearningJob?>(db=>
     {
         var key=Key(projectId);RecoverJobs(db);var policy=Policy(db,key);
         if(!policy.Capture||!policy.Learn||policy.Mode!=mode||mode=="background"&&!policy.Remote)return null;
         if(Convert.ToInt32(db.Scalar("SELECT COUNT(*) FROM jobs WHERE scope=$scope AND state='running'",("$scope",key)))>0)return null;
-        var summaries=Rows<LearningSummary>(db,"receipts","scope=$scope AND eligible=1 AND processed=0 AND job_id IS NULL ORDER BY seq LIMIT 20",("$scope",key));
+        if(revision is not null&&policy.Revision!=revision)return null;
+        var summaries=Rows<LearningSummary>(db,"receipts",
+            "scope=$scope AND eligible=1 AND processed=0 AND job_id IS NULL AND ($seq IS NULL OR seq=$seq) ORDER BY seq LIMIT 20",
+            ("$scope",key),("$seq",receipt));
         if(summaries.Count==0)return null;
         if(!force&&summaries.Count<policy.BatchSize&&Now-summaries[0].RecordedAt<TimeSpan.FromHours(24))return null;
         if(!force&&mode=="background")

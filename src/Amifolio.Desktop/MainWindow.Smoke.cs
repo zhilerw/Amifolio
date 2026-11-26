@@ -16,6 +16,10 @@ public sealed partial class MainWindow
         var observations = new List<object>();
         try
         {
+            var previewRegression = Option("--smoke-mode") is "m3" or "m3-reopen"
+                ? await RunCreativePreviewSmokeAsync(reportPath, Option("--smoke-mode") == "m3-reopen")
+                : null;
+            var nativeMemoryRegression = Option("--smoke-mode") == "m4" ? await RunNativeMemorySmokeAsync(reportPath) : null;
             var capacityRegression=Option("--smoke-mode")=="capacity"?await RunCapacityRegressionAsync():null;
             var settingsRegression=Option("--smoke-mode")=="settings"?await RunStage9RegressionAsync(reportPath):null;
             var learningRegression=Option("--smoke-mode")=="learning"?await RunLearningRegressionAsync(reportPath):null;
@@ -54,7 +58,7 @@ public sealed partial class MainWindow
             if (ArtifactList.Items.Count > 0) ArtifactList.SelectedIndex = 0;
             await RenderSnapshotAsync(reportPath + ".png");
             await File.WriteAllTextAsync(reportPath, JsonSerializer.Serialize(new { status = "native-pages-loaded", uiThread = DispatcherQueue.HasThreadAccess, pages = observations, artifacts = ArtifactList.Items.Count, iconCornerRadius = BrandIcon.CornerRadius.TopLeft,
-                headerHeight = Root.RowDefinitions[0].Height.Value, rootRows = Root.RowDefinitions.Count, editRegression, motionRegression, configurationRegression, taskRegression, collectionRegression, automationRegression, contextRaceRegression, startupRegression, learningRegression, settingsRegression, capacityRegression, dialogs = smokeDialogs,
+                headerHeight = Root.RowDefinitions[0].Height.Value, rootRows = Root.RowDefinitions.Count, previewRegression, nativeMemoryRegression, editRegression, motionRegression, configurationRegression, taskRegression, collectionRegression, automationRegression, contextRaceRegression, startupRegression, learningRegression, settingsRegression, capacityRegression, dialogs = smokeDialogs,
                 windowCorners = new { supported = OperatingSystem.IsWindowsVersionAtLeast(10, 0, 22000), applyResult = cornerPreferenceResult, actualPreference = WindowAppearance.ReadCornerPreference(this) } }, new JsonSerializerOptions { WriteIndented = true }));
         }
         catch (Exception ex) { await File.WriteAllTextAsync(reportPath + ".error.txt", ex.ToString()); }

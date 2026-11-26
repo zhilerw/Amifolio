@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Text;
 using System.Text.Json;
 
@@ -8,6 +9,8 @@ internal sealed partial class McpServer(BridgeOperations operations, Stream inpu
     internal const int MaxMessageBytes = 64 * 1024;
     internal const int MaxResponseBytes = 256 * 1024;
     private static readonly UTF8Encoding StrictUtf8 = new(false, true);
+    private static readonly string ServerVersion = typeof(McpServer).Assembly
+        .GetCustomAttribute<AssemblyInformationalVersionAttribute>()!.InformationalVersion.Split('+')[0];
     private bool initialized;
     private bool ready;
 
@@ -96,7 +99,7 @@ internal sealed partial class McpServer(BridgeOperations operations, Stream inpu
                     {
                         protocolVersion = requested is "2025-11-25" or "2025-06-18" ? requested : "2025-11-25",
                         capabilities = new { tools = new { listChanged = false } },
-                        serverInfo = new { name = "amifolio", version = "0.1.3" },
+                        serverInfo = new { name = "amifolio", version = ServerVersion },
                         instructions = "Reference files only within discovered local Codex projects. Never copy, snapshot, parse, upload or edit project originals. artifact_submit returns referenced, not archived. Parsing requires an explicit user action in the app. Search is metadata-only; context is scoped and read-only. Resolve the exact project, check learning_status, and act only on already granted permissions. Capture one bounded turn summary and exact user quotes; a receipt is not caller authentication. Claim/complete only chat-mode batches. Never grant permissions or invent source proof. Read enabled scoped summaries before accessing any original."
                     };
                     initialized = true;

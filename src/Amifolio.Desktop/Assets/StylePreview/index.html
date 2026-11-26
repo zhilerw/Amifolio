@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; base-uri 'none'; form-action 'none'">
+  <title>风格预览</title>
+  <link rel="stylesheet" href="./preview.css">
+  <script defer src="./preview.js"></script>
+</head>
+<body>
+  <main class="workspace">
+    <header class="toolbar">
+      <p id="preview-hint">点选示例元素，即可调整风格。</p>
+      <button class="background-trigger" type="button" data-editor="background-editor" aria-expanded="false"
+              aria-controls="background-editor" disabled>
+        <span class="swatch" aria-hidden="true"></span>背景
+      </button>
+    </header>
+    <fieldset class="editor background-editor" id="background-editor" hidden>
+      <legend>页面背景</legend>
+      <div class="color-controls">
+        <label for="background">背景色</label>
+        <input type="color" id="background" data-field="background" value="#fcfaf5">
+        <input type="text" id="background-hex" aria-label="背景色十六进制色值" aria-describedby="background-hint"
+               maxlength="7" autocomplete="off" spellcheck="false" placeholder="#FCFAF5">
+        <button class="reset" type="button" data-clear="background">用默认</button>
+      </div>
+      <p class="field-note" id="background-hint" hidden role="status">请输入 #RRGGBB 色值。</p>
+    </fieldset>
+
+    <section class="canvas" id="canvas" aria-label="风格示例" aria-describedby="preview-hint">
+      <div class="intro">
+        <h1><button class="preview-trigger title-trigger" type="button" data-editor="title-editor" aria-expanded="false"
+                    aria-controls="title-editor" aria-label="山间来信，编辑标题字体"
+                    aria-describedby="font-note" disabled>山间来信</button></h1>
+        <p class="preview-note" id="font-note" role="status" hidden></p>
+        <fieldset class="editor" id="title-editor" hidden>
+          <legend>标题</legend>
+          <label for="font">本机字体</label>
+          <select id="font" data-field="font" aria-describedby="font-note"></select>
+        </fieldset>
+
+        <button class="preview-trigger body-trigger" type="button" data-editor="body-editor" aria-expanded="false"
+                aria-controls="body-editor" aria-label="编辑样文和语气" aria-describedby="sample voice-note" disabled>
+          <span id="sample">把散步时收集的风景写成一封信。留一点空白，给今天的风。</span>
+          <span class="voice-note" id="voice-note" hidden></span>
+        </button>
+        <fieldset class="editor" id="body-editor" hidden>
+          <legend>正文</legend>
+          <label for="sample-text">样文</label>
+          <textarea id="sample-text" rows="3" maxlength="500" data-field="sampleText"
+                    placeholder="把散步时收集的风景写成一封信。留一点空白，给今天的风。"></textarea>
+          <label for="voice">文字语气</label>
+          <input type="text" id="voice" maxlength="240" data-field="voice" placeholder="例如轻松、自然">
+        </fieldset>
+
+        <button class="preview-trigger action-trigger" type="button" data-editor="action-editor" aria-expanded="false"
+                aria-controls="action-editor" aria-label="读一读，编辑主色和圆角" disabled>
+          读一读 <span aria-hidden="true">↗</span>
+        </button>
+        <fieldset class="editor" id="action-editor" hidden>
+          <legend>按钮</legend>
+          <div class="color-controls">
+            <label for="color">主色</label>
+            <input type="color" id="color" data-field="color" value="#24766d">
+            <input type="text" id="color-hex" aria-label="主色十六进制色值" aria-describedby="color-hint"
+                   maxlength="7" autocomplete="off" spellcheck="false" placeholder="#24766D">
+            <button class="reset" type="button" data-clear="color">用默认</button>
+          </div>
+          <p class="field-note" id="color-hint" hidden role="status">请输入 #RRGGBB 色值。</p>
+          <div class="range-controls">
+            <label for="radius">圆角</label>
+            <input type="range" id="radius" data-field="radius" min="0" max="48" value="16">
+            <output for="radius" id="radius-value"></output>
+            <button class="reset" type="button" data-clear="radius">用默认</button>
+          </div>
+        </fieldset>
+      </div>
+
+      <div class="work">
+        <button class="preview-trigger work-card" type="button" data-editor="work-editor" aria-expanded="false"
+                aria-controls="work-editor" aria-label="散步手记，编辑作品卡的间距和风格" disabled>
+          <span class="cover" aria-hidden="true">
+            <span class="sun"></span>
+            <span class="hill hill-far"></span>
+            <span class="hill hill-near"></span>
+          </span>
+          <span class="card-copy">
+            <strong>散步手记</strong>
+            <span id="work-style">封面设计</span>
+          </span>
+        </button>
+        <fieldset class="editor" id="work-editor" hidden>
+          <legend>作品卡</legend>
+          <div class="range-controls">
+            <label for="spacing">间距</label>
+            <input type="range" id="spacing" data-field="spacing" min="0" max="64" value="24">
+            <output for="spacing" id="spacing-value"></output>
+            <button class="reset" type="button" data-clear="spacing">用默认</button>
+          </div>
+          <label for="style">创作风格</label>
+          <input type="text" id="style" maxlength="240" data-field="style" placeholder="例如米白纸感、留白">
+        </fieldset>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

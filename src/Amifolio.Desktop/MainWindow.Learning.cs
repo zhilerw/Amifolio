@@ -53,10 +53,10 @@ public sealed partial class MainWindow
     }
     private async void OpenLearning(object sender,RoutedEventArgs e)=>await OpenLearningPageAsync(false);
     private async void OpenLearningLogs(object sender,RoutedEventArgs e)=>await OpenLearningPageAsync(true);
-    private async Task<bool> OpenLearningPageAsync(bool logs,string? selectedScope=null,bool explicitScope=false)
+    private async Task<bool> OpenLearningPageAsync(bool logs,string? selectedScope=null,bool explicitScope=false,string? returnPage=null)
     {
         var scope=explicitScope?selectedScope:currentPage=="connections"?SelectedScope(IntegrationScope)?.Id:loadedLearningScope;
-        var origin=explicitScope?"context":currentPage=="learning"?learningReturnPage:currentPage;
+        var origin=returnPage ?? (explicitScope?"context":currentPage=="learning"?learningReturnPage:currentPage);
         if(currentPage=="learning"&&!await CanLeaveLearningAsync())return false;
         if(!await RequestNavigationAsync("learning"))return false;
         learningReturnPage=origin;SelectPage("learning");

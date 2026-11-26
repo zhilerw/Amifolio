@@ -134,6 +134,8 @@ public sealed class PortfolioMaintenance(string dataRoot)
                 using var command=db.CreateCommand();command.CommandText="INSERT INTO store_meta(key,value) VALUES('remote_allowed','0') ON CONFLICT(key) DO UPDATE SET value='0'";command.ExecuteNonQuery();
                 command.CommandText="SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='collection_grants'";
                 if(Convert.ToInt32(command.ExecuteScalar())!=0){command.CommandText="UPDATE collection_grants SET enabled=0,revision=revision+1";command.ExecuteNonQuery();}
+                command.CommandText="SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='codex_work_sync'";
+                if(Convert.ToInt32(command.ExecuteScalar())!=0){command.CommandText="UPDATE codex_work_sync SET enabled=0,state='off'";command.ExecuteNonQuery();}
                 command.CommandText="UPDATE artifacts SET hash='',preview='',extraction_status='未解析',version=version+1 WHERE object_name LIKE 'ref:%'";command.ExecuteNonQuery();
                 command.CommandText="UPDATE work_items SET state='cancelled',owner=NULL,error_code='sources_changed' WHERE artifact_id IN(SELECT id FROM artifacts WHERE object_name LIKE 'ref:%') AND state IN('queued','running')";command.ExecuteNonQuery();
             }

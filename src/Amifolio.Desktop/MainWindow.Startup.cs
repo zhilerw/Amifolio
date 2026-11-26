@@ -63,9 +63,9 @@ public sealed partial class MainWindow
     private async Task CaptureStartupReadinessAsync()
     {
         using(StartupTiming.Measure("startup.layout"))Root.UpdateLayout();
-        var controlsReady=SearchBox.IsEnabled&&KindFilter.IsEnabled&&LibraryNav.IsEnabled&&SettingsNav.IsEnabled;
-        if(closing||!startupPreparation.IsCompletedSuccessfully||storeSession is null||!ready||operation is not null||!controlsReady||!browserInputAttached||LibraryPage.Visibility!=Visibility.Visible||LibraryPage.ActualWidth<=0||LibraryPage.ActualHeight<=0)
-            throw new InvalidOperationException("Initial library is not ready for interaction.");
+        var controlsReady=LibraryNav.IsEnabled&&ContextNav.IsEnabled&&AgentsNav.IsEnabled&&SettingsNav.IsEnabled;
+        if(closing||!startupPreparation.IsCompletedSuccessfully||storeSession is null||!ready||operation is not null||!controlsReady||!browserInputAttached||WorksHomePage.Visibility!=Visibility.Visible||WorksHomePage.ActualWidth<=0||WorksHomePage.ActualHeight<=0)
+            throw new InvalidOperationException("Initial works page is not ready for interaction.");
         var cached=ShowingBrowserCache;var count=ArtifactList.Items.Count;
         var heartbeat=new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         using(StartupTiming.Measure("startup.dispatcher-heartbeat"))
@@ -74,7 +74,7 @@ public sealed partial class MainWindow
             await heartbeat.Task.WaitAsync(TimeSpan.FromSeconds(5),backgroundTasks.Token);
         }
         backgroundTasks.Token.ThrowIfCancellationRequested();
-        startupReadyEvidence=new{controlsEnabled=controlsReady,browserInputAttached,cachedView=cached,displayedItems=count,dispatcherResponsive=true,libraryWidth=LibraryPage.ActualWidth,libraryHeight=LibraryPage.ActualHeight,windowWidth=AppWindow.Size.Width,windowHeight=AppWindow.Size.Height,requestedWindowWidth=startupWindowSize.Width,requestedWindowHeight=startupWindowSize.Height,windowResizeRequests=startupResizeRequests};
+        startupReadyEvidence=new{controlsEnabled=controlsReady,browserInputAttached,cachedView=cached,displayedItems=count,dispatcherResponsive=true,libraryWidth=WorksHomePage.ActualWidth,libraryHeight=WorksHomePage.ActualHeight,windowWidth=AppWindow.Size.Width,windowHeight=AppWindow.Size.Height,requestedWindowWidth=startupWindowSize.Width,requestedWindowHeight=startupWindowSize.Height,windowResizeRequests=startupResizeRequests};
         StartupTiming.Mark("startup.ready");
     }
 
@@ -159,9 +159,11 @@ public sealed partial class MainWindow
             if(closing)return;
             catalogVerified=true;
             await RefreshProjectsAsync();
+            if (currentPage == "creative") RefreshCreativeScopes();
             // Use the user's current location and filters. A late scan must not restore
             // the startup location after the user has already navigated elsewhere.
             await RefreshLibraryAsync();
+            if (currentPage == "works") await RefreshWorksHomeAsync();
             await RefreshVisitedDirectoryCacheAsync(backgroundTasks.Token);
             await LoadCollectionGrantStatusAsync();
             scanCompleted=DateTimeOffset.Now;

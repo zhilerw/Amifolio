@@ -22,6 +22,8 @@ internal static class Program
             var (root, command, positional, options) = Parse(args);
             mcp = command == "mcp";
             if(command=="hook-stop")return await CollectionHook.RunAsync(root,output);
+            if(command=="hook-prompt")return await CreativePromptHook.RunAsync(root,output);
+            if(command=="plugin-stop")return await CollectionHook.RunAsync(root,output, collectWorks: true);
             if (command is "repo" or "backup" or "restore")
                 throw new BridgeException("reference_only", "Project snapshots and arbitrary-path backup/restore are unavailable in reference mode. Manage application recovery explicitly in the app.");
             if (command is "task-retry" or "process-tasks")
@@ -73,13 +75,14 @@ internal static class Program
         }
     }
 
+    internal static string CodexHome => Environment.GetEnvironmentVariable("CODEX_HOME") is { } home && !string.IsNullOrWhiteSpace(home)
+        ? Path.GetFullPath(home) : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".codex");
+
     internal static async Task<PortfolioStore> OpenReferenceStoreAsync(string root, CancellationToken ct = default)
     {
-        var home = Environment.GetEnvironmentVariable("CODEX_HOME");
-        if (string.IsNullOrWhiteSpace(home)) home = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".codex");
         var store = new PortfolioStore(root);
         // Enable before initialization/queries; normal product operations never use the legacy copy store.
-        store.EnableCodexReferenceMode(Path.GetFullPath(home));
+        store.EnableCodexReferenceMode(CodexHome);
         await store.InitializeAsync(ct);
         await store.RefreshCodexProjectsAsync(ct);
         return store;
@@ -98,7 +101,8 @@ internal static class Program
 
     private static (string Root, string Command, string? Positional, Dictionary<string, string> Options) Parse(string[] args)
     {
-        var root = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Amifolio");
+        var root = Environment.GetEnvironmentVariable("AMIFOLIO_DATA_ROOT") is { } configured && Path.IsPathFullyQualified(configured)
+            ? configured : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Amifolio");
         var options = new Dictionary<string, string>(StringComparer.Ordinal);
         var words = new List<string>();
         for (var index = 0; index < args.Length; index++)
@@ -121,7 +125,7 @@ internal static class Program
             "repo" => ["--project"],
             "context" => ["--project", "--layer"],
             "list" => ["--project", "--search"],
-            "projects" or "status" or "mcp" or "tasks" or "task-cancel" or "task-retry" or "process-tasks" or "hook-stop" => [],
+            "projects" or "status" or "mcp" or "tasks" or "task-cancel" or "task-retry" or "process-tasks" or "hook-stop" or "hook-prompt" or "plugin-stop" => [],
             "backup" or "restore" => [],
             "collect" => ["--retention-days"],
             _ => throw new BridgeException("invalid_arguments", "Unknown command.")

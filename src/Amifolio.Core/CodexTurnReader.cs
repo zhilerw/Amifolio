@@ -31,7 +31,7 @@ public sealed record CodexTurnIdentity(string SessionId, string TurnId, string R
 /// Five-second cooperative deadline; cancellation is propagated. Limits/errors fail closed;
 /// empty results do not prove that there are no missed receipts outside the bounded window.
 /// </remarks>
-public sealed class CodexTurnReader(string codexHome)
+public sealed partial class CodexTurnReader(string codexHome)
 {
     private const int HeaderBytes = 128 * 1024;
     private const int TailBytes = 2 * 1024 * 1024;
@@ -59,7 +59,7 @@ public sealed class CodexTurnReader(string codexHome)
         return result.Headers;
     }
 
-    private Task<ScanResult> ScanAsync(string expectedRoot, string? sessionId, string? turnId, DateTimeOffset? notBefore, CancellationToken ct) =>
+    private Task<ScanResult> ScanAsync(string expectedRoot, string? sessionId, string? turnId, DateTimeOffset? notBefore, CancellationToken ct, string? finalMessage = null) =>
         Task.Run(async () =>
         {
             var budget = new Budget(ct);
@@ -68,7 +68,7 @@ public sealed class CodexTurnReader(string codexHome)
                 var home = AbsoluteLocal(codexHome);
                 var root = AbsoluteLocal(expectedRoot); // Lexical identity only: never open the project.
                 ArchiveSafety.NoReparse(home);
-                var files = Discover(home, budget);
+                var files = Discover(home, budget, finalMessage is null ? null : sessionId);
                 var matches = new Dictionary<string, List<TurnState>>(StringComparer.Ordinal);
                 var sessions = new HashSet<string>(StringComparer.Ordinal);
                 var duplicateSessions = new HashSet<string>(StringComparer.Ordinal);
@@ -96,7 +96,7 @@ public sealed class CodexTurnReader(string codexHome)
                         if (!sessions.Add(id)) duplicateSessions.Add(id);
                         if (!cwd.Equals(root, ArchiveSafety.PathComparison)) continue;
 
-                        var states = await ReadTailAsync(stream, length, cwd, id, sessionId is null ? null : turnId, budget).ConfigureAwait(false);
+                        var states = await ReadTailAsync(stream, length, cwd, id, sessionId is null ? null : turnId, budget, finalMessage).ConfigureAwait(false);
                         var headerAgain = await ReadAsync(stream, 0, headerLength, budget).ConfigureAwait(false);
                         if (Hash(headerAgain) != headerHash) continue;
                         // Appends are allowed; a truncated or replaced open source is not evidence.
@@ -116,6 +116,11 @@ public sealed class CodexTurnReader(string codexHome)
                 if (sessionId is not null)
                 {
                     if (duplicateSessions.Contains(sessionId) || !matches.TryGetValue(sessionId, out var states)) return ScanResult.Empty;
+                    if (finalMessage is not null)
+                    {
+                        var work = states.SingleOrDefault(t => t.Id == turnId && t.Context && t.Started && !t.Bad);
+                        return new(null, [], work?.Works);
+                    }
                     var state = states.SingleOrDefault(t => t.Id == turnId && t.Valid);
                     if (state?.Text is null) return ScanResult.Empty;
                     var hash = Hash(Utf8.GetBytes(state.Text));
@@ -136,7 +141,7 @@ public sealed class CodexTurnReader(string codexHome)
             catch (Exception ex) when (OptionalFailure(ex)) { return ScanResult.Empty; }
         }, ct);
 
-    private static List<string> Discover(string home, Budget budget)
+    private static List<string> Discover(string home, Budget budget, string? expectedSession = null)
     {
         var paths = new List<string>();
         foreach (var name in new[] { "sessions", "archived_sessions" })
@@ -167,6 +172,7 @@ public sealed class CodexTurnReader(string codexHome)
                 }
                 else if (Path.GetFileName(entry).StartsWith("rollout-", StringComparison.Ordinal) && entry.EndsWith(".jsonl", StringComparison.Ordinal))
                 {
+                    if (expectedSession is not null && FileSessionId(entry) != expectedSession) continue;
                     if (paths.Count >= MaxFiles) throw new LimitException();
                     paths.Add(entry);
                 }
@@ -208,7 +214,7 @@ public sealed class CodexTurnReader(string codexHome)
         return (id!, AbsoluteLocal(cwd), end + 1, Hash(bytes[..(end + 1)]));
     }
 
-    private static async Task<List<TurnState>> ReadTailAsync(FileStream stream, long length, string root, string sessionId, string? wantedTurn, Budget budget)
+    private static async Task<List<TurnState>> ReadTailAsync(FileStream stream, long length, string root, string sessionId, string? wantedTurn, Budget budget, string? finalMessage = null)
     {
         var offset = Math.Max(0, length - TailBytes);
         var bytes = await ReadAsync(stream, offset, (int)(length - offset), budget).ConfigureAwait(false);
@@ -234,7 +240,7 @@ public sealed class CodexTurnReader(string codexHome)
                 // Without a complete record, none of this source can yet be disambiguated.
                 return [];
             }
-            if (end - start > LineBytes) throw new LimitException();
+            if (finalMessage is null && end - start > LineBytes) throw new LimitException();
             using var doc = Parse(bytes.AsMemory(start, end - start));
             start = end + 1;
             var row = doc.RootElement;
@@ -261,6 +267,8 @@ public sealed class CodexTurnReader(string codexHome)
                 continue;
             }
             if (type != "event_msg") continue;
+            if (finalMessage is not null && active?.Id == wantedTurn)
+                ReadWorkEvent(active!, payload, sessionId, finalMessage);
             switch (String(payload, "type"))
             {
                 case "task_started":
@@ -282,6 +290,7 @@ public sealed class CodexTurnReader(string codexHome)
                 case "thread_rolled_back": return []; // This adapter does not reconstruct rollback history.
                 case "item_completed":
                 {
+                    if (finalMessage is not null) break;
                     if(!payload.TryGetProperty("item",out var item)||item.ValueKind!=JsonValueKind.Object||String(item,"type")!="UserMessage")break;
                     if(active is null)break;
                     if(String(payload,"thread_id")!=sessionId||String(payload,"turn_id")!=active.Id||!Guid.TryParseExact(String(item,"id"),"D",out _))
@@ -305,6 +314,7 @@ public sealed class CodexTurnReader(string codexHome)
                 }
                 case "user_message":
                 {
+                    if (finalMessage is not null) break;
                     if (active is null) break;
                     var id = String(payload, "turn_id");
                     if (payload.TryGetProperty("turn_id", out _) && id != active.Id) { active.Bad = true; break; }
@@ -482,10 +492,11 @@ public sealed class CodexTurnReader(string codexHome)
         internal bool Context, Started, Bad;
         internal int Users;
         internal string? Text;
+        internal List<CodexWorkSource>? Works;
         internal DateTimeOffset ObservedAt;
         internal bool Valid => Context && !Bad && Users == 1;
     }
-    private sealed record ScanResult(CodexTurnEvidence? Evidence, IReadOnlyList<CodexTurnIdentity> Headers)
+    private sealed record ScanResult(CodexTurnEvidence? Evidence, IReadOnlyList<CodexTurnIdentity> Headers, IReadOnlyList<CodexWorkSource>? Works = null)
     {
         internal static ScanResult Empty { get; } = new(null, []);
     }

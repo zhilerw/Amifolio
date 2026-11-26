@@ -9,7 +9,6 @@
     <WindowsPackageType>None</WindowsPackageType>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>../../assets/branding/amifolio.ico</ApplicationIcon>
-    <Version>1.0.0</Version>
     <AssemblyName>Amifolio</AssemblyName>
   </PropertyGroup>
   <ItemGroup>
@@ -19,6 +18,7 @@
     <ProjectReference Include="../Amifolio.Context/Amifolio.Context.csproj" />
     <Content Include="../../assets/branding/amifolio-icon-approved-v1.png" Link="Assets/Brand.png" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="../../assets/branding/amifolio.ico" Link="Assets/Amifolio.ico" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Assets/StylePreview/**/*" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
   <Target Name="IncludeWinUIResourcesInPublish" AfterTargets="ComputeFilesToPublish">
     <ItemGroup>

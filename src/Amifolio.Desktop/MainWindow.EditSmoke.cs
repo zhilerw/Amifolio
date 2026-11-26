@@ -1,4 +1,5 @@
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
 
 namespace Amifolio.Desktop;
 
@@ -77,7 +78,52 @@ public sealed partial class MainWindow
         var managed = await File.ReadAllTextAsync(target);
         Check(managed.Contains("<!-- folio:begin", StringComparison.Ordinal) && managed.Contains("保留已有规则。", StringComparison.Ordinal), "prepared entry saves with valid markers and existing rules preserved");
         Check(await CanLeaveAgentsAsync() && !AgentsHasChanges && smokeDialogAnswers.Count == 0, "post-save navigation is clean");
+
+        // Keep the original 22 checks for Test-Native.ps1 and report the added scenarios separately.
+        var agentsRecoveryChecks = new List<string>();
+        void CheckRecovery(bool condition, string name)
+        {
+            if (!condition) throw new InvalidOperationException("Native AGENTS recovery: " + name);
+            agentsRecoveryChecks.Add(name);
+        }
+        var otherPath = Path.Combine(dataRoot, "other", "AGENTS.md");
+        AgentsPath.Text = otherPath;
+        UpdateAgentsControls();
+        CheckRecovery(AgentsTargetPath.Text == target && !AgentsEditButton.IsEnabled && !UndoAgentsButton.IsEnabled,
+            "typing a custom path keeps the actual loaded target visible and blocks writes");
+        AgentsPath.Text = target;
+        UpdateAgentsControls();
+        ToggleAgentsEdit(AgentsEditButton, new RoutedEventArgs());
+        AgentsEditor.Text += "\r\n草稿规则。\r\n";
+        UpdateAgentsStatus();
+        var draft = AgentsEditor.Text;
+        CheckRecovery(AgentsStatus.Text == "有未保存的修改", "editing reports unsaved changes");
+        var external = managed + "\r\n外部规则。\r\n";
+        await File.WriteAllTextAsync(target, external);
+        smokeDialogAnswers.Enqueue(true);
+        await SaveAgentsAsync();
+        CheckRecovery(agentsConflict && AgentsConflictButton.Visibility == Visibility.Visible &&
+            !AgentsEditButton.IsEnabled && AgentsEditor.Text == draft && await File.ReadAllTextAsync(target) == external,
+            "optimistic save conflict preserves both disk changes and the draft");
+        smokeDialogAnswers.Enqueue(false);
+        await ReviewAgentsConflictAsync();
+        CheckRecovery(agentsConflict && AgentsEditor.Text == draft, "canceling conflict review preserves the draft and conflict");
+        smokeDialogAnswers.Enqueue(true);
+        await ReviewAgentsConflictAsync();
+        CheckRecovery(!agentsConflict && agentsEdit.IsEditing && AgentsHasChanges && AgentsEditor.Text == draft,
+            "confirmed conflict review uses the newer disk baseline and keeps the draft");
+        AgentsEditor.Text += "\r\n外部规则。\r\n";
+        smokeDialogAnswers.Enqueue(true);
+        await SaveAgentsAsync();
+        var merged = await File.ReadAllTextAsync(target);
+        CheckRecovery(merged.Contains("外部规则。", StringComparison.Ordinal) && merged.Contains("草稿规则。", StringComparison.Ordinal)
+            && UndoAgentsButton.IsEnabled, "reviewed edits can be saved and undone");
+        smokeDialogAnswers.Enqueue(true);
+        await UndoAgentsAsync();
+        CheckRecovery(await File.ReadAllTextAsync(target) == external && !UndoAgentsButton.IsEnabled,
+            "undo restores the reviewed disk baseline");
+
         Check(smokeDialogs.All(x => x.Background == "#FFFCFAF5"), "all native confirmation dialogs use cream background");
-        return new { checks, normalization };
+        return new { checks, normalization, agentsRecoveryChecks };
     }
 }

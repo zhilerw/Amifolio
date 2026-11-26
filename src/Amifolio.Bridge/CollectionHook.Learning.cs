@@ -27,7 +27,7 @@ internal static partial class CollectionHook
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.NonBacktracking);
 
     private static async Task<HookLearningStatus> LearningFallbackAsync(PortfolioStore store, CodexProject project,
-        string cwd, JsonElement hook, CancellationToken ct)
+        string cwd, JsonElement hook, CancellationToken ct, bool learnExplicit = false)
     {
         using var bounded = CancellationTokenSource.CreateLinkedTokenSource(ct);
         bounded.CancelAfter(TimeSpan.FromSeconds(15));
@@ -80,9 +80,32 @@ internal static partial class CollectionHook
             if (!current.Capture || current.Revision != policy.Revision || current.GrantedAt != policy.GrantedAt)
                 return new("disabled", "capture_policy_changed");
             if (await learning.HasReceiptAsync(project.Id, session!, turn, token).ConfigureAwait(false)) return new("already_recorded", "receipt_exists");
-            var capture = new LearningCapture(project.Id, session!, turn, HookSummary(hook), "partial", HookQuotes(source.UserText), []);
+            var quotes = HookQuotes(source.UserText);
+            var explicitSource = source.UserText.Trim();
+            var evidence = new MemoryEvidence("verified-turn", explicitSource, session!, turn, project.Id, true, source.ObservedAt);
+            var proposals = learnExplicit && current.Learn && current.Mode == "chat" && explicitSource.Length <= 160
+                ? MemoryPolicy.ExplicitProjectPreferences(evidence) : [];
+            if (proposals.Count > 0) quotes = [explicitSource];
+            var capture = new LearningCapture(project.Id, session!, turn, HookSummary(hook), "partial", quotes, []);
             var receipt = await context.CaptureLearningAsync(capture, home, token).ConfigureAwait(false);
-            return receipt.State == "verified" ? new("recorded", "partial_agent_report") : new("pending_evidence", "source_changed_before_commit");
+            if (receipt.State != "verified") return new("pending_evidence", "source_changed_before_commit");
+            if (proposals.Count == 0 || receipt.Duplicate) return new("recorded", "partial_agent_report");
+
+            var job = await learning.ClaimExplicitTurnAsync(project.Id, receipt.Sequence, current.Revision, token).ConfigureAwait(false);
+            if (job is null) return new("recorded", "queued_for_learning");
+            try
+            {
+                var exact = job.Evidence.Where(row => row.Evidence.Text == explicitSource)
+                    .Select(row => row.Evidence.Id).ToArray();
+                var receiptProposals = exact.Length == 0 ? [] : proposals.Select(p => p with { EvidenceIds = exact }).ToArray();
+                await context.CompleteLearningAsync(job.Id, job.Token, receiptProposals, home, token).ConfigureAwait(false);
+                return new("recorded", "explicit_preference_evaluated");
+            }
+            catch
+            {
+                await learning.DeferAsync(job.Id, job.Token, "permission_changed", CancellationToken.None).ConfigureAwait(false);
+                throw;
+            }
         }
         catch (OperationCanceledException) { return new("pending_evidence", "bounded_capture_cancelled"); }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException or JsonException)

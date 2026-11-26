@@ -6,13 +6,15 @@ using System.Text.Json;
 using Amifolio.Core;
 using Microsoft.Data.Sqlite;
 
-// Opt-in copied-source runner only. Never register this benchmark in the normal suite.
+// Opt-in synthetic runner. Do not add it to the normal regression suite.
 // Reuse the original stage9 synthetic seed, including its >2048-character previews,
 // rather than substituting a smaller/selective workload. Success is distinct from target attainment.
 internal static class Stage9bQueryBenchmark
 {
     internal static async Task<int> Run(string fixtureRoot,string reportPath)
     {
+        fixtureRoot = Path.GetFullPath(fixtureRoot);
+        reportPath = Path.GetFullPath(reportPath);
         if(Directory.Exists(fixtureRoot)||File.Exists(fixtureRoot)||File.Exists(reportPath))throw new IOException("fresh-benchmark-paths-required");
         Directory.CreateDirectory(fixtureRoot);
         var start=Stopwatch.StartNew();

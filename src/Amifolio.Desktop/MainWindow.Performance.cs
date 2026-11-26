@@ -97,6 +97,6 @@ public sealed partial class MainWindow
             var ordered=duringScan.Order().ToArray();
             await File.WriteAllTextAsync(reportPath,JsonSerializer.Serialize(new{pid=Environment.ProcessId,startup=StartupTiming.Snapshot(),readyEvidence=startupReadyEvidence,scanMilliseconds,parseMilliseconds,parsed,productionBackgroundStarted=true,endurance,dispatcher=new{valid=ordered.Length>=10,samples=latency.Count,overlapping=ordered.Length,p95=ordered.Length==0?(double?)null:ordered[(int)Math.Ceiling(ordered.Length*.95)-1],max=ordered.Length==0?(double?)null:ordered[^1]},sourceProjects=SourceStore.CodexProjects.Count,limitations="Dispatcher latency uses only samples queued during real scan; fewer than 10 overlapping samples is invalid responsiveness evidence. Not physical input or frame pacing."},new JsonSerializerOptions{WriteIndented=true})).ConfigureAwait(false);
         }
-        catch(Exception ex){await File.WriteAllTextAsync(reportPath+".error",ex.GetType().Name).ConfigureAwait(false);}
+        catch (Exception ex) { await File.WriteAllTextAsync(reportPath + ".error", ex.ToString()).ConfigureAwait(false); }
     }
 }

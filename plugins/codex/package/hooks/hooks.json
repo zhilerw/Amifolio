@@ -1,0 +1,31 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "true",
+            "commandWindows": "& (Join-Path $env:PLUGIN_ROOT 'runtime/Amifolio.Bridge.exe') hook-prompt",
+            "timeout": 8,
+            "statusMessage": "读取创作偏好"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "true",
+            "commandWindows": "& (Join-Path $env:PLUGIN_ROOT 'runtime/Amifolio.Bridge.exe') plugin-stop",
+            "timeout": 50,
+            "async": true,
+            "statusMessage": "核对 Codex 作品"
+          }
+        ]
+      }
+    ]
+  }
+}

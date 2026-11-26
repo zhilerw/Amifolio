@@ -24,7 +24,7 @@ public sealed partial class MainWindow
             return new{checks,cacheLoadMilliseconds};
         }
         Check(backgroundBrowserEnabled&&ShowingBrowserCache&&ready,"empty-cache-opens-without-discovery");
-        Check(!navigation.ContainsKey("tasks")&&navigation.Count==7,"logs-removed-from-sidebar");
+        Check(navigation.Keys.ToHashSet(StringComparer.Ordinal).SetEquals(new[] { "works", "creative", "agents", "settings" }), "daily destinations and settings only in sidebar");
         Check(Root.FindName("CancelButton") is null,"transient-progress-has-no-cancel-control");
         await RequestNavigationAsync("settings");OpenLogs(this,new RoutedEventArgs());
         using(var timeout=new CancellationTokenSource(TimeSpan.FromSeconds(5)))while(currentPage!="tasks"||operation is not null)await Task.Delay(20,timeout.Token);

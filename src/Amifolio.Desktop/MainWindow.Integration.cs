@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using Amifolio.Context;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -22,6 +22,17 @@ public sealed partial class MainWindow
         CodexConfigPath.Text=integration.ConfigPath;CodexSkillPath.Text=integration.SkillDirectory;
         BridgeCommand.Text=integration.McpSnippet(BridgeExecutable(),dataRoot);
     }
+    private async void ShowNativePluginSetup(object sender, RoutedEventArgs e) =>
+        await RunAsync("查看 Codex 插件安装", async _ =>
+        {
+            var root = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "codex", "marketplace"));
+            var catalog = Path.Combine(root, ".agents", "plugins", "marketplace.json");
+            var text = File.Exists(catalog)
+                ? $"在 Codex 插件设置中添加本地市场目录，安装 Amifolio 后按提示信任钩子。\n\n{root}"
+                : "请使用包含 codex/marketplace 的完整 1.1 预发行包，再从 Codex 插件设置添加本地市场。";
+            await ShowMessageAsync("安装 Amifolio 插件", text + "\n\n已有 Amifolio 独立 MCP 或结束钩子时，启用插件前先停用对应的旧接入。");
+        });
+
     private static TextBox PreviewBox(string text)=>new(){Text=text,IsReadOnly=true,AcceptsReturn=true,TextWrapping=TextWrapping.Wrap,FontFamily=(Microsoft.UI.Xaml.Media.FontFamily)Application.Current.Resources["AppFontFamily"],FontSize=12,Width=540,Height=310};
     private void CopyText(string text,string status){var payload=new DataPackage();payload.SetText(text);Clipboard.SetContent(payload);StatusText.Text=status;}
     private async void ViewCodexConfig(object sender,RoutedEventArgs e)=>await RunAsync("读取 Codex 配置",async token=>{var snap=await integration.ReadConfigAsync(token);await ShowMessageAsync("config.toml",PreviewBox(snap.Exists?snap.Content[..Math.Min(snap.Content.Length,120000)]:"文件尚不存在，写入 MCP 时创建。"));});
@@ -79,10 +90,18 @@ public sealed partial class MainWindow
         {
             var path=DeployPath(scope);var original=await agents.ReadAsync(path,token);var policy=await context.Learning.PolicyAsync(scope,token);await context.Learning.PublishProjectionAsync(scope,true,token);var proposed=agents.PreviewManagedBlock(original,context.LearningEntryDirectory(scope),policy.Share);
             if(!await ConfirmAsync("配置 AGENTS.md 入口？",PreviewBox(path+"\n\n"+MakeDiff(original.Content,proposed)),"备份并配置"))return;
-            var backup=await agents.SaveAsync(original,proposed,token);var saved=await agents.ReadAsync(path,token);agentsUndo.Record(path,backup,saved.Hash);
-            if(currentPage=="agents"){AgentsPath.Text=path;await ReadAgentsAsync();}
+            var backup = await agents.SaveAsync(original, proposed, token);
+            agentsUndo.Clear();
+            var saved = await agents.ReadAsync(path, token);
+            var matched = TrackAgentsWrite(saved, proposed, backup);
+            if (currentPage == "agents")
+            {
+                AgentsPath.Text = path;
+                SetAgentsSnapshot(saved, matched ? "已配置指令入口" : "写入后文件又有变化，已显示磁盘版本。");
+            }
             await RefreshEnvironmentAsync();
-            StatusText.Text=policy.Share?"风格与记忆入口已配置":"共享已关闭，对应托管入口已移除；已有规则保留";
+            StatusText.Text = !matched ? "写入后文件又有变化。" :
+                policy.Share ? "风格与记忆入口已配置" : "共享已关闭，对应托管入口已移除。";
         });
     }
     private async void InstallCollectionHook(object sender,RoutedEventArgs e)=>await RunAsync("安装结束钩子",async token=>

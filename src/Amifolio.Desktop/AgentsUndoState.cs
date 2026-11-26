@@ -12,11 +12,12 @@ internal sealed class AgentsUndoState
         BackupPath = backup;
         savedHash = hash;
     }
-    public void FileLoaded(string path)
+    public void FileLoaded(string path, string hash, bool exists)
     {
-        if (!SameTarget(path)) Clear();
+        if (!CanRestore(path, hash, exists)) Clear();
     }
-    public bool CanRestore(string path, string hash) => HasBackup && SameTarget(path) && savedHash == hash;
+    public bool CanRestore(string path, string hash, bool exists) =>
+        exists && HasBackup && SameTarget(path) && savedHash == hash;
     private bool SameTarget(string path) => string.Equals(targetPath, Path.GetFullPath(path), OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
     public void Clear() { targetPath = savedHash = BackupPath = null; }
 }

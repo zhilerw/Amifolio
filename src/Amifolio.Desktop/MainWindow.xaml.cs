@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Reflection;
 using System.Text.Json;
 using Amifolio.Core;
 using Amifolio.Context;
@@ -31,7 +30,7 @@ public sealed partial class MainWindow : Window
     private CancellationTokenSource? operation;
     private CancellationTokenSource? searchDelay;
     private readonly CancellationTokenSource backgroundTasks=new();
-    private string currentPage = "library";
+    private string currentPage = "works";
     private string? selectedArtifactId;
     private readonly int? cornerPreferenceResult;
     private SizeInt32 startupWindowSize;
@@ -47,16 +46,13 @@ public sealed partial class MainWindow : Window
         StartupTiming.Mark("main.ctor.begin");
         using(StartupTiming.Measure("main.profile-validation"))ValidatePerformanceInvocation();
         using(StartupTiming.Measure("main.initialize-component"))InitializeComponent();
-        var assembly=typeof(MainWindow).Assembly;
-        InstalledVersionText.Text=(assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
-            ?? assembly.GetName().Version?.ToString() ?? string.Empty).Split('+',2)[0];
         StartupTiming.Mark("main.services.begin");
         dataRoot = Option("--data-root") ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Amifolio");
         store = new PortfolioStore(dataRoot);
         context = new ContextService(store);
         modelConfiguration = new ModelConfigurationStore(dataRoot);
-        pages = new() { ["library"] = LibraryPage, ["projects"] = ProjectsPage, ["tasks"]=TasksPage, ["learning"]=LearningPage, ["help"] = HelpPage, ["agents"] = AgentsPage, ["connections"] = ConnectionsPage, ["settings"] = SettingsPage };
-        navigation = new() { ["library"] = LibraryNav, ["projects"] = ProjectsNav, ["context"] = ContextNav, ["help"] = HelpNav, ["agents"] = AgentsNav, ["connections"] = ConnectionsNav, ["settings"] = SettingsNav };
+        pages = new() { ["works"] = WorksHomePage, ["creative"] = CreativePage, ["native-memory"] = NativeMemoryPage, ["library"] = LibraryPage, ["projects"] = ProjectsPage, ["tasks"]=TasksPage, ["learning"]=LearningPage, ["help"] = HelpPage, ["agents"] = AgentsPage, ["connections"] = ConnectionsPage, ["settings"] = SettingsPage };
+        navigation = new() { ["works"] = LibraryNav, ["creative"] = ContextNav, ["agents"] = AgentsNav, ["settings"] = SettingsNav };
         StartupTiming.Mark("main.services.end");
         using(StartupTiming.Measure("main.integration"))InitializeIntegration();
         ((PortfolioStore)store).EnableCodexReferenceMode(integration.CodexHome);
@@ -95,9 +91,35 @@ public sealed partial class MainWindow : Window
         StoragePath.Text = dataRoot;
         using(StartupTiming.Measure("main.browser"))InitializeBrowser();
         using(StartupTiming.Measure("main.learning"))InitializeLearningPage();
-        SelectPage("library");
+        InitializeWorksHome();
+        Root.SizeChanged += (_, e) => SetNavigationDensity(e.NewSize.Width < 520);
+        SelectPage("works");
         StartupTiming.Mark("main.ctor.end");
-        Closed += (_, _) => { closing = true; DisposeBrowser(); StopAutomaticProcessing(); noticeTimer.Stop(); motion.Dispose(); operation?.Cancel(); backgroundTasks.Cancel(); searchDelay?.Cancel(); ModelKey.Password = ""; storeSession?.Dispose(); };
+        Closed += (_, _) => { closing = true; CloseStylePreview(); DisposeBrowser(); StopAutomaticProcessing(); noticeTimer.Stop(); motion.Dispose(); operation?.Cancel(); backgroundTasks.Cancel(); searchDelay?.Cancel(); ModelKey.Password = ""; storeSession?.Dispose(); };
+    }
+
+    private bool compactNavigation;
+
+    private void SetNavigationDensity(bool compact)
+    {
+        if (compact == compactNavigation) return;
+        compactNavigation = compact;
+        NavigationColumn.Width = new GridLength(compact ? 62 : 110);
+        LibraryNavLabel.Visibility = ContextNavLabel.Visibility = AgentsNavLabel.Visibility =
+            compact ? Visibility.Collapsed : Visibility.Visible;
+        foreach (var button in new[] { LibraryNav, ContextNav, AgentsNav })
+        {
+            if (compact)
+            {
+                button.Padding = new Thickness(5, 11, 5, 11);
+                button.HorizontalContentAlignment = HorizontalAlignment.Center;
+            }
+            else
+            {
+                button.ClearValue(Control.PaddingProperty);
+                button.ClearValue(Control.HorizontalContentAlignmentProperty);
+            }
+        }
     }
 
     private static string? Option(string key)
@@ -143,6 +165,7 @@ public sealed partial class MainWindow : Window
             updating = false;
             StartupTiming.Mark("startup.filters.end");
             using(StartupTiming.Measure("startup.library"))await RefreshLibraryAsync();
+            using (StartupTiming.Measure("startup.works")) await RefreshWorksHomeAsync();
             ready = true;
             StatusText.Text = "就绪";
         });
@@ -179,6 +202,7 @@ public sealed partial class MainWindow : Window
         if(currentPage=="learning"&&!await CanLeaveLearningAsync())return false;
         if (currentPage == "context" && !await CanLeaveContextAsync()) return false;
         if (currentPage == "agents" && !await CanLeaveAgentsAsync()) return false;
+        if (currentPage == "creative" && !await CanLeaveCreativeAsync()) return false;
         if(mainLearning)learningReturnPage="context";
         if(operation is not null)
         {
@@ -199,6 +223,9 @@ public sealed partial class MainWindow : Window
         {
             switch (page)
             {
+                case "works": await RefreshWorksHomeAsync(); break;
+                case "creative": await LoadCreativePageAsync(); break;
+                case "native-memory": await LoadNativeMemoryPageAsync(); break;
                 case "library": await RefreshLibraryAsync(); break;
                 case "projects": await RefreshProjectsAsync(); break;
                 case "tasks": await LoadTasksAsync(); break;
@@ -224,8 +251,15 @@ public sealed partial class MainWindow : Window
         }
         foreach (var pair in navigation)
         {
-            var parent=page=="learning"?learningReturnPage=="tasks"?"settings":learningReturnPage:page;
-            var selected = pair.Key == parent || pair.Key=="settings"&&page=="tasks";
+            var parent = page == "learning" ? learningReturnPage : page;
+            parent = parent switch
+            {
+                "context" or "native-memory" => "creative",
+                "library" or "projects" => "works",
+                "tasks" or "connections" or "help" => "settings",
+                _ => parent
+            };
+            var selected = pair.Key == parent;
             pair.Value.Style = (Style)Application.Current.Resources[selected ? "SelectedNavButton" : "NavButton"];
         }
     }

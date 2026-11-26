@@ -15,6 +15,9 @@ public sealed partial class MainWindow
     private string? loadedContextDocument;
     private readonly DocumentEditState contextEdit = new();
     private readonly DocumentEditState agentsEdit = new();
+    private string agentsFileStatus = "尚未读取文件";
+    private bool agentsConflict;
+    private bool agentsConfirmingLeave;
     private long contextUiRevision;
     private long contextReadRequest;
 
@@ -30,10 +33,19 @@ public sealed partial class MainWindow
 
     private async Task<bool> CanLeaveAgentsAsync()
     {
-        if (AgentsHasChanges && !await ConfirmAsync("有尚未保存的修改", "切换将丢弃未保存的修改。", "丢弃修改")) return false;
+        if (operation is not null || agentsConfirmingLeave) return false;
+        agentsConfirmingLeave = true;
+        try
+        {
+            if (!await ConfirmDiscardAgentsAsync()) return false;
+        }
+        finally { agentsConfirmingLeave = false; }
         CancelAgentsEditing();
         return true;
     }
+
+    private async Task<bool> ConfirmDiscardAgentsAsync() =>
+        !AgentsHasChanges || await ConfirmAsync("有未保存的修改", "继续操作将丢弃当前草稿。", "丢弃草稿");
 
     private async Task LoadContextAsync(bool background = false)
     {
@@ -288,28 +300,18 @@ public sealed partial class MainWindow
 
     private async Task LoadAgentsForScopeAsync()
     {
-        var projectId = SelectedScope(AgentsScope)?.Id;
-        loadedAgentsScopeId = projectId;
-        if (projectId is null)
+        loadedAgentsScopeId = SelectedScope(AgentsScope)?.Id;
+        var root = loadedAgentsScopeId is null
+            ? integration.CodexHome
+            : projects.FirstOrDefault(p => p.Id == loadedAgentsScopeId)?.RootPath;
+        AgentsPath.Text = string.IsNullOrWhiteSpace(root) ? "" : Path.Combine(root, "AGENTS.md");
+        SetAgentsSnapshot(null, "尚未读取文件");
+        if (string.IsNullOrWhiteSpace(root))
         {
-            var codexHome = integration.CodexHome;
-            AgentsPath.Text = Path.Combine(codexHome, "AGENTS.md");
-        }
-        else
-        {
-            var project = projects.First(p => p.Id == projectId);
-            if (string.IsNullOrWhiteSpace(project.RootPath))
-            {
-                AgentsPath.Text = "";
-                AgentsEditor.Text = "";
-                agentsSnapshot = null;
-                agentsEdit.Load("", false);
-                UpdateEditingControls();
-                ClearAgentsUndo();
-                AgentsStatus.Text = "项目未绑定目录，请输入 AGENTS.md 路径。";
-                return;
-            }
-            AgentsPath.Text = Path.Combine(project.RootPath, "AGENTS.md");
+            agentsUndo.Clear();
+            agentsFileStatus = "项目尚无可用目录。可在「更多操作」中指定文件。";
+            UpdateAgentsControls();
+            return;
         }
         await ReadAgentsAsync();
     }
@@ -320,121 +322,292 @@ public sealed partial class MainWindow
         if (!await CanLeaveAgentsAsync())
         {
             updating = true;
-            AgentsScope.SelectedItem = AgentsScope.Items.OfType<ScopeChoice>().FirstOrDefault(x => x.Id == loadedAgentsScopeId);
-            updating = false;
+            try
+            {
+                AgentsScope.SelectedItem = AgentsScope.Items.OfType<ScopeChoice>().FirstOrDefault(x => x.Id == loadedAgentsScopeId);
+            }
+            finally { updating = false; }
             return;
         }
-        await RunAsync("正在读取 AGENTS.md", async _ => await LoadAgentsForScopeAsync());
+        await RunAsync("读取 AGENTS.md", async _ => await LoadAgentsForScopeAsync());
     }
 
-    private async Task ReadAgentsAsync()
+    private async Task ReadAgentsAsync(CancellationToken token = default)
     {
-        if (!Path.IsPathFullyQualified(AgentsPath.Text.Trim())) throw new InvalidOperationException("请输入 AGENTS.md 的绝对路径。");
-        var snapshot = await agents.ReadAsync(AgentsPath.Text.Trim());
-        agentsUndo.FileLoaded(snapshot.Path);
-        UndoAgentsButton.IsEnabled = agentsUndo.HasBackup;
-        agentsSnapshot = snapshot;
-        AgentsEditor.Text = snapshot.Content;
+        var path = AgentsPath.Text.Trim();
+        if (!Path.IsPathFullyQualified(path)) throw new InvalidOperationException("请输入 AGENTS.md 的绝对路径。");
+        var snapshot = await agents.ReadAsync(path, token);
+        loadedAgentsScopeId = SelectedScope(AgentsScope)?.Id;
+        SetAgentsSnapshot(snapshot, snapshot.Exists ? "已读取" : "文件尚不存在，首次保存时创建。");
         if (ready && !loadingPage && currentPage == "agents") motion?.Enter(AgentsEditor, MotionKind.Detail);
-        agentsEdit.Load(snapshot.Content, true);
-        UpdateEditingControls();
-        AgentsStatus.Text = snapshot.Exists ? "已读取" : "文件不存在，保存后创建";
+    }
+
+    private void SetAgentsSnapshot(AgentsFileSnapshot? snapshot, string status)
+    {
+        agentsSnapshot = snapshot;
+        agentsFileStatus = status;
+        agentsConflict = false;
+        if (snapshot is not null)
+        {
+            agentsUndo.FileLoaded(snapshot.Path, snapshot.Hash, snapshot.Exists);
+            AgentsPath.Text = snapshot.Path;
+        }
+        var content = snapshot?.Content ?? "";
+        agentsEdit.Load(content, snapshot is not null);
+        AgentsEditor.Text = content;
+        UpdateAgentsControls();
     }
 
     private async void ReadAgents(object sender, RoutedEventArgs e)
     {
-        await RunAsync("读取文件", async _ =>
+        CloseAgentsActions();
+        await RunAsync("读取文件", async token =>
         {
-            if (!await CanLeaveAgentsAsync()) return;
-            await ReadAgentsAsync();
+            if (!await ConfirmDiscardAgentsAsync()) return;
+            await ReadAgentsAsync(token);
         });
+        if (!closing) AgentsActionsButton.Focus(FocusState.Programmatic);
     }
 
     private async void PrepareAgents(object sender, RoutedEventArgs e)
-        => await PrepareAgentsAsync();
+    {
+        CloseAgentsActions();
+        await PrepareAgentsAsync();
+        if (!closing && agentsEdit.IsEditing) AgentsEditor.Focus(FocusState.Programmatic);
+    }
 
     private async Task PrepareAgentsAsync()
     {
-        if (!agentsEdit.IsEditing || operation is not null) return;
+        if (!agentsEdit.IsEditing || operation is not null || agentsConflict || !AgentsTargetMatchesPath) return;
+        var snapshot = agentsSnapshot!;
         await RunAsync("准备作品集入口", async token =>
         {
-            if (agentsSnapshot is null || !string.Equals(agentsSnapshot.Path, AgentsPath.Text.Trim(), StringComparison.OrdinalIgnoreCase)) throw new InvalidOperationException("目标路径已变更，请取消编辑后重新读取。");
-            var project = SelectedScope(AgentsScope)?.Id;
+            var project = loadedAgentsScopeId;
             var policy = await context.Learning.PolicyAsync(project, token);
             await context.Learning.PublishProjectionAsync(project, true, token);
-            // Build against current editor text, while retaining the disk snapshot for optimistic write checks.
-            var editingSnapshot = agentsSnapshot! with { Content = agentsEdit.TextForSave(AgentsEditor.Text) };
+            // Build against the draft, retaining the disk snapshot for optimistic writes.
+            var editingSnapshot = snapshot with { Content = agentsEdit.TextForSave(AgentsEditor.Text) };
             AgentsEditor.Text = agents.PreviewManagedBlock(editingSnapshot, context.LearningEntryDirectory(project), policy.Share);
-            AgentsStatus.Text = policy.Share ? "入口已更新，尚未保存" : "共享已关闭，对应入口已移除，尚未保存";
         });
     }
 
+    private void DeployAgentsFromPage(object sender, RoutedEventArgs e)
+    {
+        CloseAgentsActions();
+        DeployAgentsEntry(sender, e);
+    }
+
+    private void CloseAgentsActions() => AgentsActionsButton.Flyout.Hide();
+
     private async void ToggleAgentsEdit(object sender, RoutedEventArgs e)
     {
-        if (operation is not null) return;
-        if (agentsEdit.IsEditing) { await SaveAgentsAsync(); return; }
-        if (agentsSnapshot is null || !agentsEdit.Begin()) return;
-        UpdateEditingControls();
+        if (operation is not null || !AgentsTargetMatchesPath || agentsConflict) return;
+        if (agentsEdit.IsEditing)
+        {
+            await SaveAgentsAsync();
+            if (!closing)
+            {
+                if (agentsConflict) AgentsConflictButton.Focus(FocusState.Programmatic);
+                else if (agentsEdit.IsEditing) AgentsEditor.Focus(FocusState.Programmatic);
+                else AgentsEditButton.Focus(FocusState.Programmatic);
+            }
+            return;
+        }
+        if (!agentsEdit.Begin()) return;
+        UpdateAgentsControls();
         AgentsEditor.Focus(FocusState.Programmatic);
     }
 
-    private void CancelAgentsEdit(object sender, RoutedEventArgs e)
+    private async void CancelAgentsEdit(object sender, RoutedEventArgs e)
     {
-        if (operation is null) CancelAgentsEditing();
+        if (operation is not null) return;
+        if (agentsConflict)
+        {
+            await RunAsync("读取磁盘版本", async token =>
+            {
+                if (await ConfirmDiscardAgentsAsync()) await ReadAgentsAsync(token);
+            });
+        }
+        else CancelAgentsEditing();
+        if (!closing && !agentsEdit.IsEditing) AgentsEditButton.Focus(FocusState.Programmatic);
     }
 
     private void CancelAgentsEditing()
     {
+        if (agentsConflict)
+        {
+            SetAgentsSnapshot(null, "磁盘文件已改变。请重新读取后继续编辑。");
+            return;
+        }
         AgentsEditor.Text = agentsEdit.Cancel();
-        UpdateEditingControls();
+        UpdateAgentsControls();
     }
 
     private async Task SaveAgentsAsync()
     {
-        if (agentsSnapshot is null) { await ShowMessageAsync("尚未读取文件", "请先读取目标文件，再编辑和保存。"); return; }
-        if (!agentsEdit.IsEditing) return;
+        if (agentsSnapshot is not { } snapshot || !agentsEdit.IsEditing || agentsConflict || !AgentsTargetMatchesPath) return;
         if (!AgentsHasChanges) { CancelAgentsEditing(); return; }
+        var proposed = agentsEdit.TextForSave(AgentsEditor.Text);
         await RunAsync("保存 AGENTS.md", async token =>
         {
-            if (!string.Equals(agentsSnapshot.Path, AgentsPath.Text.Trim(), StringComparison.OrdinalIgnoreCase)) throw new InvalidOperationException("目标路径已变更，请重新读取后保存。");
-            var newText = agentsEdit.TextForSave(AgentsEditor.Text);
-            if (newText == agentsSnapshot.Content) { StatusText.Text = "没有需要保存的修改"; return; }
-            var preview = new TextBox { Text = MakeDiff(agentsSnapshot.Content, newText), IsReadOnly = true, AcceptsReturn = true, TextWrapping = TextWrapping.NoWrap, FontFamily = (Microsoft.UI.Xaml.Media.FontFamily)Application.Current.Resources["AppFontFamily"], FontSize = 12, Width = 530, Height = 330 };
-            if (!await ConfirmAsync("确认写入 AGENTS.md", preview, "备份并保存")) return;
-            var backup = await agents.SaveAsync(agentsSnapshot, newText, token);
-            var persisted = await agents.ReadAsync(agentsSnapshot.Path, token);
-            if (persisted.Content == newText) agentsUndo.Record(persisted.Path, backup, persisted.Hash);
-            else agentsUndo.Clear();
-            await ReadAgentsAsync();
-            UndoAgentsButton.IsEnabled = agentsUndo.HasBackup;
-            AgentsStatus.Text = backup is null ? "已创建文件。" : "已保存并备份";
-            StatusText.Text = "AGENTS.md 已保存，新会话生效情况需验证";
+            var preview = AgentsDiffPreview(snapshot.Path, MakeDiff(snapshot.Content, proposed));
+            if (await ConfirmAsync("保存 AGENTS.md？", preview, snapshot.Exists ? "备份并保存" : "创建文件"))
+                await WriteAgentsAsync(snapshot, proposed, restoring: false, token);
         });
     }
+
+    private async void ReviewAgentsConflict(object sender, RoutedEventArgs e) => await ReviewAgentsConflictAsync();
+
+    private async Task ReviewAgentsConflictAsync()
+    {
+        if (!agentsConflict || !agentsEdit.IsEditing || agentsSnapshot is not { } snapshot || !AgentsTargetMatchesPath) return;
+        await RunAsync("对照磁盘版本", async token =>
+        {
+            var latest = await agents.ReadAsync(snapshot.Path, token);
+            var draft = agentsEdit.TextForSave(AgentsEditor.Text);
+            var detail = latest.Exists ? "以下是从磁盘版本改成当前草稿的差异。" : "磁盘文件已被删除。保存草稿将重新创建文件。";
+            var preview = AgentsDiffPreview(latest.Path, MakeDiff(latest.Content, draft),
+                detail + "可保留草稿继续编辑。之后保存时仍需确认差异。");
+            if (!await ConfirmAsync("对照磁盘版本", preview, "保留草稿并继续")) return;
+            SetAgentsSnapshot(latest, latest.Exists ? "已读取" : "文件尚不存在，首次保存时创建。");
+            agentsEdit.Begin();
+            AgentsEditor.Text = draft;
+            UpdateAgentsControls();
+        });
+        if (!closing && agentsEdit.IsEditing) AgentsEditor.Focus(FocusState.Programmatic);
+    }
+
+    private static TextBox AgentsDiffPreview(string path, string diff, string? detail = null) => new()
+    {
+        Text = detail is null ? path + "\n\n" + diff : path + "\n\n" + detail + "\n\n" + diff,
+        IsReadOnly = true,
+        AcceptsReturn = true,
+        TextWrapping = TextWrapping.Wrap,
+        FontFamily = (Microsoft.UI.Xaml.Media.FontFamily)Application.Current.Resources["AppFontFamily"],
+        FontSize = 13,
+        Height = 300
+    };
 
     private async void UndoAgents(object sender, RoutedEventArgs e)
     {
-        if (agentsUndo.BackupPath is null || agentsSnapshot is null) return;
-        if (!await CanLeaveAgentsAsync()) return;
+        CloseAgentsActions();
+        await UndoAgentsAsync();
+        if (!closing) AgentsActionsButton.Focus(FocusState.Programmatic);
+    }
+
+    private async Task UndoAgentsAsync()
+    {
+        if (agentsUndo.BackupPath is not { } backup || agentsSnapshot is not { } snapshot ||
+            agentsEdit.IsEditing || agentsConflict || !AgentsTargetMatchesPath) return;
         await RunAsync("撤销上次保存", async token =>
         {
-            if (!string.Equals(agentsSnapshot.Path, AgentsPath.Text.Trim(), StringComparison.OrdinalIgnoreCase)) throw new InvalidOperationException("目标路径已变更，请重新读取后撤销。");
-            var current = await agents.ReadAsync(agentsSnapshot.Path, token);
-            if (!agentsUndo.CanRestore(current.Path, current.Hash)) throw new InvalidOperationException("目标或内容已改变，已停止撤销以保护其他文件和外部编辑。");
-            if (!await ConfirmAsync("恢复上次备份？", "将恢复上次保存前的内容，同时备份当前内容。", "恢复备份")) return;
-            var previous = await File.ReadAllTextAsync(agentsUndo.BackupPath, token);
-            await agents.SaveAsync(current, previous, token);
-            await ReadAgentsAsync();
-            UndoAgentsButton.IsEnabled = false;
-            agentsUndo.Clear();
-            StatusText.Text = "已恢复备份内容";
+            var current = await agents.ReadAsync(snapshot.Path, token);
+            if (!agentsUndo.CanRestore(current.Path, current.Hash, current.Exists))
+            {
+                ShowAgentsUndoConflict(current);
+                return;
+            }
+            if (!await ConfirmAsync("恢复上次备份？", "将恢复上次保存前的内容，同时备份当前内容。\n\n" + current.Path, "恢复备份")) return;
+            var previous = await File.ReadAllTextAsync(backup, token);
+            await WriteAgentsAsync(current, previous, restoring: true, token);
         });
     }
 
-    private void ClearAgentsUndo()
+    private void ShowAgentsUndoConflict(AgentsFileSnapshot latest)
     {
+        SetAgentsSnapshot(latest, "磁盘文件已改变，已读取当前版本。上次保存无法撤销。");
+        StatusText.Text = "磁盘文件已改变，撤销已停止。";
+    }
+
+    private async Task WriteAgentsAsync(AgentsFileSnapshot expected, string text, bool restoring, CancellationToken token)
+    {
+        string? backup;
+        try { backup = await agents.SaveAsync(expected, text, token); }
+        catch (IOException)
+        {
+            var latest = await agents.ReadAsync(expected.Path, token);
+            if (latest.Exists == expected.Exists && latest.Hash == expected.Hash) throw;
+            if (restoring) ShowAgentsUndoConflict(latest);
+            else
+            {
+                agentsUndo.FileLoaded(latest.Path, latest.Hash, latest.Exists);
+                agentsConflict = true;
+                UpdateAgentsControls();
+                StatusText.Text = "磁盘文件已改变，草稿仍在编辑器中。";
+            }
+            return;
+        }
+
         agentsUndo.Clear();
-        UndoAgentsButton.IsEnabled = false;
+        var status = restoring ? "已恢复备份" : backup is null ? "已创建文件" : "已保存，原内容已备份";
+        AgentsFileSnapshot persisted;
+        try
+        {
+            persisted = await agents.ReadAsync(expected.Path, token);
+        }
+        catch
+        {
+            SetAgentsSnapshot(null, "已写入文件。请重新读取后继续编辑。");
+            throw;
+        }
+        if (!TrackAgentsWrite(persisted, text, backup, restoring))
+            status = "写入完成，随后文件又有变化。已显示磁盘版本。";
+        SetAgentsSnapshot(persisted, status);
+        StatusText.Text = status;
+    }
+
+    private bool TrackAgentsWrite(AgentsFileSnapshot persisted, string text, string? backup, bool restoring = false)
+    {
+        if (!persisted.Exists || persisted.Content != text) return false;
+        if (!restoring) agentsUndo.Record(persisted.Path, backup, persisted.Hash);
+        return true;
+    }
+
+    private bool AgentsTargetMatchesPath =>
+        agentsSnapshot is { } snapshot && loadedAgentsScopeId == SelectedScope(AgentsScope)?.Id &&
+        string.Equals(snapshot.Path, AgentsPath.Text.Trim(), StringComparison.OrdinalIgnoreCase);
+
+    private void AgentsPathChanged(object sender, TextChangedEventArgs e)
+    {
+        if (ready) UpdateAgentsControls();
+    }
+
+    private void AgentsEditorChanged(object sender, TextChangedEventArgs e)
+    {
+        if (ready) UpdateAgentsStatus();
+    }
+
+    private void UpdateAgentsStatus()
+    {
+        var target = agentsSnapshot?.Path ?? AgentsPath.Text.Trim();
+        AgentsTargetPath.Text = target.Length == 0 ? "尚未选择文件" : target;
+        AgentsStatus.Text = agentsConflict
+            ? "磁盘文件已改变。草稿已保留，可先对照差异。"
+            : agentsSnapshot is not null && !AgentsTargetMatchesPath
+                ? "目标已更改，请在「更多操作」中读取指定路径。"
+                : AgentsHasChanges ? "有未保存的修改"
+                : agentsEdit.IsEditing ? "正在编辑" : agentsFileStatus;
+    }
+
+    private void UpdateAgentsControls()
+    {
+        var idle = operation is null;
+        var editing = agentsEdit.IsEditing;
+        var targetReady = AgentsTargetMatchesPath;
+        AgentsEditor.IsReadOnly = !editing;
+        AgentsPath.IsReadOnly = editing;
+        AgentsEditButton.Content = editing ? "保存" : "编辑";
+        AgentsEditButton.IsEnabled = idle && targetReady && !agentsConflict;
+        if (motion is { } effects) effects.SetVisible(AgentsCancelButton, editing, MotionKind.Edit);
+        else AgentsCancelButton.Visibility = editing ? Visibility.Visible : Visibility.Collapsed;
+        AgentsCancelButton.IsEnabled = idle;
+        AgentsCancelButton.Content = agentsConflict ? "放弃草稿" : "取消";
+        AgentsConflictButton.Visibility = editing && agentsConflict ? Visibility.Visible : Visibility.Collapsed;
+        AgentsConflictButton.IsEnabled = idle;
+        AgentsActionsButton.IsEnabled = idle;
+        PrepareAgentsButton.IsEnabled = idle && editing && targetReady && !agentsConflict;
+        UndoAgentsButton.IsEnabled = idle && !editing && targetReady && !agentsConflict && agentsUndo.HasBackup;
+        UpdateAgentsStatus();
     }
 
     private void UpdateEditingControls()
@@ -449,15 +622,7 @@ public sealed partial class MainWindow
         ContextDeleteButton.IsEnabled = idle && !contextEdit.IsEditing && loadedContextDocument is not null and not "START.md" and not "sources.md";
         ContextRefreshButton.IsEnabled = ContextGenerateButton.IsEnabled = AdoptCandidateButton.IsEnabled = idle && !contextEdit.IsEditing;
         ContextEnabled.IsEnabled = OriginalAccess.IsEnabled = idle && !contextEdit.IsEditing;
-        AgentsEditor.IsReadOnly = !agentsEdit.IsEditing;
-        AgentsPath.IsReadOnly = agentsEdit.IsEditing;
-        AgentsEditButton.Content = agentsEdit.IsEditing ? "保存" : "修改";
-        AgentsEditButton.IsEnabled = idle && agentsEdit.CanEdit;
-        if (motion is { } agentEffects) agentEffects.SetVisible(AgentsCancelButton, agentsEdit.IsEditing, MotionKind.Edit);
-        else AgentsCancelButton.Visibility = agentsEdit.IsEditing ? Visibility.Visible : Visibility.Collapsed;
-        AgentsCancelButton.IsEnabled = idle;
-        PrepareAgentsButton.IsEnabled = idle && agentsEdit.IsEditing;
-        UndoAgentsButton.IsEnabled = idle && !agentsEdit.IsEditing && agentsUndo.HasBackup;
+        UpdateAgentsControls();
     }
 
     private static string MakeDiff(string before, string after)

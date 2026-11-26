@@ -7,9 +7,13 @@ using System.Text;
 using System.Text.Json;
 using Microsoft.Data.Sqlite;
 
+if (args.Length == 5 && args[0] == "--codex-plugin-fixture")
+    return await CodexPluginCases.Run(args[1], args[2], args[3], args[4]);
 if(args.Length==4&&args[0]=="--stage9-upgrade")return await Stage9Upgrade.Run(args[1],args[2],args[3]);
 if(args.Length==1&&args[0]=="--stage9-performance-logic")return await Stage9PerformanceLogicCases.Run();
 if(args.Length==3&&args[0]=="--stage9-performance")return await Stage9PerformanceCheck.Run(args[1],args[2]);
+if (args.Length == 3 && args[0] == "--stage9-query-benchmark")
+    return await Stage9bQueryBenchmark.Run(args[1], args[2]);
 if(args.Length==4&&args[0]=="--claim-task")
 {
     using var lease=await new TaskStore(args[1]).TryClaimAsync(args[2]);if(lease is null)return 5;
@@ -419,6 +423,7 @@ tests = tests.Concat(ReferenceCases.All).Concat(CatalogCases.All).ToArray();
 tests = tests.Concat(Stage6RecoveryCases.All).ToArray();
 tests = tests.Concat(BrowserIndexCases.All).ToArray();
 tests = tests.Concat(LearningCases.All).ToArray();
+tests = tests.Concat(CreativePreviewCases.All).ToArray();
 tests = tests.Concat(MemoryPolicyCases.All).ToArray();
 tests = tests.Concat(CodexTurnCases.All).ToArray();
 tests = tests.Concat(LearningRecoveryCases.All).ToArray();

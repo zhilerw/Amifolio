@@ -2,9 +2,24 @@
 
 Amifolio discovers real local Codex projects and references files in their original directories. The default CLI, MCP connection and Stop hook enable reference mode using the effective `CODEX_HOME` (otherwise the current user's `.codex`). They never copy project files, take repository/ZIP snapshots, upload content, manually create projects, edit originals, or automatically parse files. The application stores its own metadata/context separately. Existing archive data is preserved for recovery, not silently migrated or treated as current project files.
 
-This is a local integration bundle, not a marketplace registration or an official plugin manifest. It contains a skill, an opt-in installer and a stdio MCP connection template. Installing a skill does not connect MCP, authorize project access, change host permissions or restart Codex.
+## Install the Amifolio plugin
 
-## Desktop setup
+The Amifolio 1.1.0 Windows candidate includes the 1.1.0 Codex plugin with its manifest, hooks, skill and local MCP server. Add the bundled marketplace, then install Amifolio under Codex Plugins. From the CLI, the equivalent steps are:
+
+~~~powershell
+codex plugin marketplace add 'E:\path\Amifolio\codex\marketplace'
+codex plugin add amifolio@amifolio-local
+~~~
+
+Trust the Amifolio hooks in Codex after reviewing them. In the Amifolio desktop app, open **Codex 作品**, choose a project, and enable automatic work sync for that project. Project learning has its own consent controls. In **项目偏好**, explicitly enable delivery of saved settings to Codex. Preferences are available to the trusted plugin while the Amifolio window is closed. Disable the plugin from Codex or remove it with `codex plugin remove amifolio@amifolio-local`.
+
+For offline staging, run `tools/New-CodexPluginPackage.ps1` against the published Windows bridge directory. The marketplace is a directory containing `.agents/plugins/marketplace.json` and `plugins/amifolio`. Keep both under the same root. Match the effective `CODEX_HOME` and Amifolio data root between the app and bridge.
+
+### Migrating from the standalone integration
+
+If Codex already has a standalone Amifolio MCP server or a separately trusted Amifolio Stop hook, disable those Amifolio entries before enabling the plugin to keep one active integration. The standalone Stop status message is `Amifolio 项目扫描` or `Amifolio 收纳核对`. Once the plugin skill is visible, remove a duplicate standalone Amifolio skill from the scope where it was installed. Use Codex's existing trust flow again if an update changes a hook command.
+
+## Standalone integration for older installations
 
 The desktop Agent integration page shows the connection/configuration preview and explicit installation actions. Review those previews before applying them. Existing conflicting configuration and unrelated hooks are preserved. Host configuration, skill installation and necessary AGENTS.md changes require explicit setup actions; project discovery/reference registration does not authorize them. Restart Codex manually after changing its MCP connection.
 

@@ -68,7 +68,7 @@ public sealed partial class MainWindow
             Check(currentPage=="settings"&&SettingsNav.Style==(Style)Application.Current.Resources["SelectedNavButton"],"settings-route-and-sidebar-selection");
             Check(HistoryButton.Visibility==Visibility.Visible&&CheckUpdatesButton.Visibility==Visibility.Visible&&ReleasePageButton.Visibility==Visibility.Visible,"history-check-and-release-controls-visible");
             Check(context.LegacyRetired&&StorageStatusText.Text.Contains("只读历史"),"storage-retirement-status-visible");
-            Check(ReleaseStatusText.Text=="尚未检查更新。"&&releasePage==GitHubReleaseService.RepoReleasesPage,"initial-update-status-does-not-claim-latest");
+            Check(ReleaseStatusText.Text.Contains("私有")&&releasePage==GitHubReleaseService.RepoReleasesPage,"initial-update-status-does-not-claim-latest");
             var scroll=SettingsPage.Children.OfType<ScrollViewer>().Single();
             var heading=SettingsPage.Children.OfType<TextBlock>().Single();
             var scrollContent=(FrameworkElement)scroll.Content;

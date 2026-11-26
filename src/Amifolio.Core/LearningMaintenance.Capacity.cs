@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using Microsoft.Data.Sqlite;
 
@@ -93,8 +94,22 @@ internal static partial class LearningMaintenance
     }
     private static void MergeWatermark(SqliteConnection db,SqliteTransaction tx,string scope,long sequence)=>
         Exec(db,tx,"INSERT INTO learning_watermarks VALUES($scope,$seq) ON CONFLICT(scope) DO UPDATE SET sequence=MAX(sequence,excluded.sequence)",("$scope",scope),("$seq",sequence));
-    private static void PreserveUndo(SqliteConnection db,SqliteTransaction tx,string id,JsonObject payload)=>
-        Exec(db,tx,"INSERT INTO history(entry_id,payload) SELECT $id,$p WHERE NOT EXISTS(SELECT 1 FROM history WHERE entry_id=$id AND payload=$p)",("$id",id),("$p",payload.ToJsonString()));
+    private static void PreserveUndo(SqliteConnection db, SqliteTransaction tx, string id, JsonObject payload)
+    {
+        var serialized = payload.ToJsonString();
+        using var incoming = JsonDocument.Parse(serialized);
+        using (var command = Command(db, tx, "SELECT payload FROM history WHERE entry_id=$id", ("$id", id)))
+        using (var reader = command.ExecuteReader())
+        {
+            while (reader.Read())
+            {
+                using var existing = JsonDocument.Parse(reader.GetString(0));
+                // Independent histories can have the same revision number and different content.
+                if (JsonElement.DeepEquals(existing.RootElement, incoming.RootElement)) return;
+            }
+        }
+        Exec(db, tx, "INSERT INTO history(entry_id,payload) VALUES($id,$p)", ("$id", id), ("$p", serialized));
+    }
     private static void StoreCold(SqliteConnection db,SqliteTransaction tx,string table,string id,JsonObject payload)
     {
         Exec(db,tx,"INSERT INTO "+LearningColdStorage.ColdTable(table)+"(id,payload) VALUES($id,$p) ON CONFLICT(id) DO UPDATE SET payload=$p",("$id",id),("$p",payload.ToJsonString()));
